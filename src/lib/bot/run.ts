@@ -75,6 +75,9 @@ export async function runBot(deps: RunDeps): Promise<RunReport> {
       const message = (error instanceof Error ? error.message : String(error)).slice(0, 300);
       console.error(`bot: could not bring in ${nomination.sourceUrl}: ${message}`);
       await store.move(nomination.id, "APPROVED", "FAILED", { error: message });
+      // Tell the person who tagged it, once. A second failed try for the same reason stays quiet.
+      const sorry = SAY.failed(message);
+      if (!(await store.repliedWith(nomination.postId, sorry))) await store.queueReply(nomination.postId, sorry);
       report.failed += 1;
     }
   }

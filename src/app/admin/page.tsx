@@ -66,6 +66,13 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           </>
         )}
       </p>
+      {bot && (
+        <form action="/api/admin/bot-check" method="post">
+          <button type="submit" className="button">
+            Check X now
+          </button>
+        </form>
+      )}
       {nominations.length === 0 ? (
         <p className="empty">No requests yet. They appear here when someone tags @{botHandle} with add.</p>
       ) : (
