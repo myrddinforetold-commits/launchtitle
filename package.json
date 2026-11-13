@@ -9,17 +9,22 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "play": "tsx play/server.ts"
+    "play": "tsx play/server.ts",
+    "migrate": "tsx scripts/migrate.ts",
+    "vercel-build": "tsx scripts/migrate.ts && next build"
   },
   "dependencies": {
     "fflate": "^0.8.3",
     "next": "15.5.29",
+    "pg": "^8.23.1",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
     "@eslint/eslintrc": "^3",
     "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",

@@ -31,16 +31,25 @@ npm run lint
 
 | Setting | Default | What it does |
 | --- | --- | --- |
-| `LT_DATA_DIR` | `./.data` | Where games and their files are kept |
+| `DATABASE_URL` | unset | Postgres connection string. Unset, game records go to a JSON file in `LT_DATA_DIR` |
+| `LT_DATA_DIR` | `./.data` | Where game files are kept, and game records when there is no database |
 | `LT_PLAY_HOST` | `play.localhost:4001` | Host that serves games, at `{slug}.<host>` |
 | `LT_PLAY_SCHEME` | `http` | `https` in production |
 | `LT_APP_ORIGIN` | `http://localhost:3000` | The only origin allowed to frame a game |
 | `LT_OPEN_IMPORT` | off | Allow imports without sign-in (local only) |
 
+### Database
+
+Game records live in Postgres (Neon, attached to the Vercel project as `launchtitle-db`). Schema changes are numbered SQL files in `db/migrations/`. `npm run migrate` applies the ones a database has not seen; Vercel runs it before each production build. Each file must be safe to run twice.
+
+Preview deployments share the production database for now, so preview builds do not migrate. Give previews their own Neon branch before a second person works on the schema.
+
+Tests run against a real Postgres inside the test process, so they need no database.
+
 ### What milestone 1 still needs
 
-- Postgres in place of the local JSON file, and object storage in place of local files. Both sit behind interfaces (`GameRepo`, `BlobStore`), so this is a swap.
-- A second domain and a deployed play server.
+- Object storage in place of local files, behind the `BlobStore` interface. Until then the deployed app can list games but cannot store one.
+- The play server deployed on `launchtitle.games`.
 - The scan, boot test and screenshot steps of the import pipeline.
 - A browser test proving a game frame cannot read the app's cookies or storage. Today's tests prove the server side of that: separate origins, no cookies, framing limited to the app.
 - Pinning the resolved IP address when crawling a URL. Today the private-address check looks at the host name only.
@@ -57,6 +66,7 @@ npm run lint
 | `brand/tools/build_logo.py` | The script that builds the logo files from the mark's geometry |
 | `design/` | Reference screens and placeholder artwork for the console shell |
 | `src/`, `play/`, `tests/` | The app, the play server and their tests |
+| `db/migrations/`, `scripts/` | Database schema changes and the script that applies them |
 
 ## Where to start building
 
