@@ -92,6 +92,7 @@ Game files live in a private Cloudflare R2 bucket (`launchtitle-games`), keyed b
 | `design/` | Reference screens and placeholder artwork for the console shell |
 | `src/`, `play/`, `tests/` | The app, the local play server and their tests |
 | `worker/` | The play domain: the Cloudflare Worker that serves games on `launchtitle.games` |
+| `skills/launch-title-game/` | A skill that teaches an assistant to build a store-ready game and how to publish it |
 | `db/migrations/`, `scripts/` | Database schema changes and the script that applies them |
 
 ## Where to start building
