@@ -7,6 +7,8 @@ export function getConfig() {
     dataDir: process.env.LT_DATA_DIR ?? path.join(process.cwd(), ".data"),
     /** Postgres connection string. Without it, game records go to a local file. */
     databaseUrl: process.env.DATABASE_URL || undefined,
+    /** Cloudflare R2 bucket for game files. Unless all four are set, files stay on local disk. */
+    r2: readR2(),
     /**
      * Host that serves game files. Each game lives at `{slug}.{playHost}`.
      * In production this must be a different registrable domain from the app,
@@ -18,6 +20,21 @@ export function getConfig() {
     appOrigin: process.env.LT_APP_ORIGIN ?? "http://localhost:3000",
     /** Lets anyone import a game without signing in. For local development only. */
     openImport: process.env.LT_OPEN_IMPORT === "1",
+  };
+}
+
+function readR2() {
+  const accountId = process.env.R2_ACCOUNT_ID;
+  const bucket = process.env.R2_BUCKET;
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
+  if (!accountId || !bucket || !accessKeyId || !secretAccessKey) return undefined;
+  // Values pasted into a dashboard often carry a stray space or newline.
+  return {
+    accountId: accountId.trim(),
+    bucket: bucket.trim(),
+    accessKeyId: accessKeyId.trim(),
+    secretAccessKey: secretAccessKey.trim(),
   };
 }
 
