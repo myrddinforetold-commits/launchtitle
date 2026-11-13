@@ -88,6 +88,17 @@ describe("managing a game", () => {
     expect(after.cover).toEqual(saved.cover);
   });
 
+  it("remembers that a game is made for phones, and can be set back", async () => {
+    const live = new MemoryLiveIndex();
+    const game = await add();
+    const phone = await setDetails({ repo, store, live }, maker, game, { display: "portrait" });
+    expect(phone.display).toBe("portrait");
+    expect((await repo.get("lantern-bay"))!.display).toBe("portrait");
+    const wide = await setDetails({ repo, store, live }, maker, phone, { display: "fill" });
+    expect(wide.display).toBeUndefined();
+    expect((await repo.get("lantern-bay"))!.display).toBeUndefined();
+  });
+
   it("refuses a cover that is not an image, and changes from anyone else", async () => {
     const live = new MemoryLiveIndex();
     const game = await add();

@@ -42,13 +42,15 @@ export async function setDetails(
   deps: Deps,
   user: User,
   game: Game,
-  details: { description?: string; cover?: Uint8Array },
+  details: { description?: string; cover?: Uint8Array; display?: "fill" | "portrait" },
 ): Promise<Game> {
   if (!canManage(user, game)) throw new ManageError("You cannot change this game.");
   const updated: Game = { ...game };
   if (details.description !== undefined) {
     updated.description = details.description.replace(/\r\n/g, "\n").trim().slice(0, MAX_DESCRIPTION);
   }
+  if (details.display === "portrait") updated.display = "portrait";
+  else if (details.display === "fill") delete updated.display;
   if (details.cover && details.cover.byteLength > 0) {
     if (details.cover.byteLength > MAX_IMAGE_BYTES) throw new ManageError("The cover image is over 4 MB.");
     const type = sniffImage(details.cover);

@@ -2,14 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type Props = { title: string; src: string; sandbox: string; allow: string };
+type Props = { title: string; src: string; sandbox: string; allow: string; portrait?: boolean };
 
 /**
  * The Play button and the screen it opens. The game fills the window with a
  * slim bar above it, like switching to a game on a console. Nothing loads
  * from the game until Play is pressed.
  */
-export function Player({ title, src, sandbox, allow }: Props) {
+export function Player({ title, src, sandbox, allow, portrait = false }: Props) {
   const [open, setOpen] = useState(false);
   const screen = useRef<HTMLDivElement>(null);
   const opener = useRef<HTMLButtonElement>(null);
@@ -50,7 +50,7 @@ export function Player({ title, src, sandbox, allow }: Props) {
         Play
       </button>
       {open && (
-        <div ref={screen} className="player" role="dialog" aria-modal="true" aria-label={`Playing ${title}`}>
+        <div ref={screen} className={portrait ? "player portrait" : "player"} role="dialog" aria-modal="true" aria-label={`Playing ${title}`}>
           <div className="player-bar">
             {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}
             <img src="/lt-mark.svg" alt="" width={24} height={24} />

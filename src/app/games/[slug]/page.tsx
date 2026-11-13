@@ -69,6 +69,7 @@ export default async function GamePage({ params, searchParams }: Props) {
                 src={game.externalUrl ?? playUrl(game.slug)}
                 sandbox={game.externalUrl ? LINKED_FRAME_SANDBOX : GAME_FRAME_SANDBOX}
                 allow={GAME_FRAME_ALLOW}
+                portrait={game.display === "portrait"}
               />
             ) : (
               <p className="notice">This game is not playable right now. Only you and the Launch Title team can see this page.</p>
@@ -96,6 +97,14 @@ export default async function GamePage({ params, searchParams }: Props) {
                 Cover image
                 <small>Wide, 16:9, at least 1280 by 720. PNG, JPEG or WebP, up to 4 MB.</small>
                 <input name="cover" type="file" accept="image/png,image/jpeg,image/webp" />
+              </label>
+              <label>
+                On a wide screen
+                <small>Pick the phone shape for a game made for phones, so it is not stretched across a laptop.</small>
+                <select name="display" defaultValue={game.display ?? "fill"}>
+                  <option value="fill">Fill the window</option>
+                  <option value="portrait">Phone shape, in the middle</option>
+                </select>
               </label>
               <button type="submit">SAVE</button>
             </form>

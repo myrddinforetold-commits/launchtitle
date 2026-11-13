@@ -829,3 +829,32 @@ table.people + h2,
 .empty {
   max-width: 720px;
 }
+
+/* A game made for phones keeps a phone-shaped screen on anything wider. */
+.player.portrait {
+  align-items: center;
+}
+
+.player.portrait .player-bar {
+  align-self: stretch;
+}
+
+.player.portrait iframe {
+  flex: 1 1 auto;
+  width: auto;
+  max-width: 100%;
+  min-height: 0;
+  aspect-ratio: 9 / 19.5;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+}
+
+form.submit select {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--navy);
+  color: var(--paper);
+  font: inherit;
+}
