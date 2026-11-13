@@ -252,15 +252,24 @@ describe("a pass of the bot", () => {
     });
   });
 
-  it("records a failed import for a person to see, and says nothing on X", async () => {
+  it("records a failed import and tells the person who tagged it, once", async () => {
     inbox = [mention({ text: "@launchtitlegg add", authorId: "77", authorHandle: "maker", urls: [GAME] })];
     await run();
     const [n] = await store.recent();
     await store.move(n.id, "AWAITING_REVIEW", "APPROVED", { title: "The Game" });
     now = new Date(now.getTime() + 300_000);
-    const report = await run({ importGame: async () => Promise.reject(new Error("That page could not be fetched.")) });
-    expect(report).toMatchObject({ failed: 1, imported: 0, replies: 0 });
-    expect((await store.recent())[0]).toMatchObject({ state: "FAILED", error: "That page could not be fetched." });
+    const blocked = "That site does not allow being shown inside another site. Its owner needs to allow launchtitle.gg to frame it.";
+    const failing = { importGame: async () => Promise.reject(new Error(blocked)) };
+    const report = await run(failing);
+    expect(report).toMatchObject({ failed: 1, imported: 0, replies: 1 });
+    expect((await store.recent())[0]).toMatchObject({ state: "FAILED", error: blocked });
+    expect(SAY.failed(blocked)).toContain("doesn't allow other sites to show it");
+    expect(SAY.failed("That page could not be fetched.")).toBe("We couldn't add this one yet. We're taking a look.");
+
+    // Approved again, it fails the same way: no second reply.
+    await store.move(n.id, "FAILED", "APPROVED", { title: "The Game" });
+    now = new Date(now.getTime() + 300_000);
+    expect(await run(failing)).toMatchObject({ failed: 1, replies: 0 });
   });
 
   it("stops replying at the daily allowance and catches up later", async () => {

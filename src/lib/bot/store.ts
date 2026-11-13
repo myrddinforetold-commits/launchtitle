@@ -223,6 +223,12 @@ export class BotStore {
     await this.sql.query("INSERT INTO bot_replies (in_reply_to, body) VALUES ($1, $2)", [inReplyTo, body]);
   }
 
+  /** Has this exact reply already been queued or sent under this post? */
+  async repliedWith(inReplyTo: string, body: string): Promise<boolean> {
+    const rows = await this.sql.query("SELECT 1 FROM bot_replies WHERE in_reply_to = $1 AND body = $2 LIMIT 1", [inReplyTo, body]);
+    return rows.length > 0;
+  }
+
   async queuedReplies(limit: number): Promise<{ id: string; inReplyTo: string; body: string }[]> {
     const rows = await this.sql.query<{ id: string | number; in_reply_to: string; body: string }>(
       "SELECT id, in_reply_to, body FROM bot_replies WHERE state = 'QUEUED' ORDER BY id LIMIT $1",

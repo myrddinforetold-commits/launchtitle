@@ -10,6 +10,11 @@ export const SAY = {
   already: "That one is already on Launch Title.",
   optedOut: "The creator asked us not to add that one.",
   removed: "Done. It's off Launch Title.",
+  /** Why a game could not be brought in, in terms the person who tagged it can act on. */
+  failed: (reason: string) =>
+    /does not allow being shown/i.test(reason)
+      ? "We couldn't add this one yet: the game's site doesn't allow other sites to show it. Its owner can allow launchtitle.gg, then tag us again."
+      : "We couldn't add this one yet. We're taking a look.",
   live: (url: string, creator: string) => `It's live: ${url} @${creator}, sign in with X there to manage it.`,
 };
 

@@ -26,7 +26,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: game.title,
     description: game.description || `Play ${game.title} on Launch Title.`,
-    openGraph: game.cover ? { images: [`/media/${game.cover.hash}`] } : undefined,
+    // The picture comes from opengraph-image.tsx beside this file.
+    twitter: { card: "summary_large_image" },
   };
 }
 
