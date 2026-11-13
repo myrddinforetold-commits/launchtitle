@@ -117,7 +117,7 @@ Version 1 hosts static web games only: HTML, JavaScript, WebAssembly and assets.
 1. **Fetch.** Collect the files. Limits: 200 MB and 2,000 files per game.
 2. **Scan.** Check for crypto-miner and malware signatures, and list every outbound domain the game calls.
 3. **Store.** Save as an immutable, content-addressed version in object storage.
-4. **Serve.** Publish at `{gameId}.<play-domain>`, on a separate registrable domain from the app.
+4. **Serve.** Publish at `{gameId}.launchtitle.games`, on a separate registrable domain from the app.
 5. **Boot test.** A headless browser loads the game at desktop and mobile sizes. It records time to first frame, console errors and memory.
 6. **Capture.** Take 3 screenshots and a 6-second clip for the game page and the X card.
 7. **Publish.** A pass goes to the open shelf. A fail falls back to embed, and the creator gets the report.
@@ -311,7 +311,7 @@ These must exist before the first imported copy goes live, and the payout items 
 
 **Decisions**
 
-- [ ] A separate play domain for serving the games.
+- [x] A separate play domain for serving the games: `launchtitle.games` (registered at Namecheap, as is `launchtitle.gg`).
 - [ ] Payout rail for version 1: card payouts, stablecoin, or both.
 - [ ] Size of the weekly pool in phase 1.
 - [ ] Per-game cap on one week's pool (placeholder 15%).
