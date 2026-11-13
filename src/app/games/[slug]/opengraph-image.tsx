@@ -67,7 +67,7 @@ export default async function Image({ params }: { params: Promise<{ slug: string
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 18, maxWidth: 860 }}>
             <div style={{ fontSize: titleSize, fontWeight: 800, lineHeight: 1.02, letterSpacing: -2 }}>{title}</div>
-            {creator && <div style={{ fontSize: 34, fontWeight: 600, color: "#b9c2d6" }}>by @{creator.handle}</div>}
+            {creator && <div style={{ fontSize: 34, fontWeight: 600, color: "#b9c2d6" }}>{`by @${creator.handle}`}</div>}
             <div style={{ display: "flex", alignItems: "center", gap: 22, marginTop: 14 }}>
               <div
                 style={{
