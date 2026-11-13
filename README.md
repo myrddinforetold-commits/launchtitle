@@ -7,7 +7,43 @@ A console-style home for AI-made web games. Anyone tags a game on X, the creator
 
 ## Status
 
-Planning and design are done. No product code exists yet. The next step is milestone 0 (the manual pilot), then milestone 1 (the hosting core).
+Planning and design are done. Milestone 1 (the hosting core) is in progress: games can be imported from a zip or a public URL, stored as immutable versions, and served from their own subdomain into a sandboxed frame. It runs locally only. Nothing is deployed.
+
+## Run it locally
+
+Needs Node 22.
+
+```sh
+npm install
+LT_OPEN_IMPORT=1 npm run dev   # the app, on http://localhost:3000
+npm run play                   # the play server, on http://{slug}.play.localhost:4001
+```
+
+Open http://localhost:3000/submit and import a zip that has `index.html` at its top level. Browsers resolve any `*.localhost` name to your own machine, so each game gets its own origin with no DNS setup.
+
+`LT_OPEN_IMPORT=1` lets anyone import without signing in. It exists for local development and must never be set on a public deployment.
+
+```sh
+npm test            # unit and server tests
+npm run typecheck
+npm run lint
+```
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `LT_DATA_DIR` | `./.data` | Where games and their files are kept |
+| `LT_PLAY_HOST` | `play.localhost:4001` | Host that serves games, at `{slug}.<host>` |
+| `LT_PLAY_SCHEME` | `http` | `https` in production |
+| `LT_APP_ORIGIN` | `http://localhost:3000` | The only origin allowed to frame a game |
+| `LT_OPEN_IMPORT` | off | Allow imports without sign-in (local only) |
+
+### What milestone 1 still needs
+
+- Postgres in place of the local JSON file, and object storage in place of local files. Both sit behind interfaces (`GameRepo`, `BlobStore`), so this is a swap.
+- A second domain and a deployed play server.
+- The scan, boot test and screenshot steps of the import pipeline.
+- A browser test proving a game frame cannot read the app's cookies or storage. Today's tests prove the server side of that: separate origins, no cookies, framing limited to the app.
+- Pinning the resolved IP address when crawling a URL. Today the private-address check looks at the host name only.
 
 ## What is in this repo
 
@@ -20,6 +56,7 @@ Planning and design are done. No product code exists yet. The next step is miles
 | `brand/logo/` | The logo family as SVG and PNG, with usage rules |
 | `brand/tools/build_logo.py` | The script that builds the logo files from the mark's geometry |
 | `design/` | Reference screens and placeholder artwork for the console shell |
+| `src/`, `play/`, `tests/` | The app, the play server and their tests |
 
 ## Where to start building
 
