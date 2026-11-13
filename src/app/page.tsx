@@ -1,8 +1,9 @@
 import Link from "next/link";
 
 import { GameCard } from "@/components/GameCard";
-import { accounts, currentUser, xApp } from "@/lib/auth/current";
+import { accounts, currentUser, plays, xApp } from "@/lib/auth/current";
 import { isPlayable, type Game } from "@/lib/games";
+import { playsLabel, type PlayStats } from "@/lib/plays";
 import { openStores } from "@/lib/stores";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
       .catch(() => null)) ?? new Map<string, string>();
   const by = (game: Game) => (game.creatorId ? handles.get(game.creatorId) : undefined);
   const user = await currentUser();
+  const stats = (await (await plays())?.stats().catch(() => null)) ?? new Map<string, PlayStats>();
+  const played = (game: Game) => stats.get(game.slug)?.plays ?? 0;
+  // A "Most played" shelf only means something once a few games have been played.
+  const mostPlayed = games.filter((game) => played(game) > 0).sort((a, b) => played(b) - played(a)).slice(0, 8);
+  const WEEK = 7 * 24 * 60 * 60 * 1000;
+  const fresh = games.filter((game) => Date.now() - Date.parse(game.createdAt) < WEEK);
+  const shelves = games.length >= 6;
 
   return (
     <>
@@ -102,7 +110,11 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
             <>
               <p className="kicker">Now playing</p>
               <h2>{featured.title}</h2>
-              {by(featured) && <p className="meta">by @{by(featured)}</p>}
+              {(by(featured) || played(featured) > 0) && (
+                <p className="meta">
+                  {[by(featured) && `by @${by(featured)}`, played(featured) > 0 && playsLabel(played(featured))].filter(Boolean).join(" · ")}
+                </p>
+              )}
               {featured.description && <p className="blurb">{featured.description}</p>}
               <div className="actions">
                 <Link className="button primary" href={`/games/${featured.slug}`}>
@@ -134,12 +146,34 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
         </div>
       </section>
 
+      {shelves && mostPlayed.length >= 3 && (
+        <section className="shelf">
+          <h2>Most played</h2>
+          <div className="cards">
+            {mostPlayed.map((game) => (
+              <GameCard key={game.slug} game={game} by={by(game)} plays={played(game)} />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {shelves && fresh.length >= 3 && fresh.length < games.length && (
+        <section className="shelf">
+          <h2>New this week</h2>
+          <div className="cards">
+            {fresh.slice(0, 8).map((game) => (
+              <GameCard key={game.slug} game={game} by={by(game)} plays={played(game)} />
+            ))}
+          </div>
+        </section>
+      )}
+
       {games.length > 0 && (
         <section id="games" className="shelf">
           <h2>All games</h2>
           <div className="cards">
             {games.map((game) => (
-              <GameCard key={game.slug} game={game} by={by(game)} />
+              <GameCard key={game.slug} game={game} by={by(game)} plays={played(game)} />
             ))}
           </div>
         </section>

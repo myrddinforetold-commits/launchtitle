@@ -1426,3 +1426,133 @@ table.people button[value="approve"] {
     border: 0;
   }
 }
+
+/* The game sits on a stage, with the launch screen over it until it has loaded. */
+.player-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.player-stage iframe {
+  height: 100%;
+}
+
+.launch {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--void);
+  transition: opacity 0.45s ease, visibility 0.45s;
+}
+
+.launch.done {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.launch-art {
+  position: absolute;
+  inset: -40px;
+  background-size: cover;
+  background-position: center;
+  filter: blur(28px) saturate(1.1);
+  opacity: 0.45;
+}
+
+.launch-copy {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+}
+
+.launch-copy strong {
+  font-size: clamp(24px, 4vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.launch-copy small {
+  min-height: 1em;
+  color: var(--mist);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.launch-bar {
+  position: relative;
+  width: min(220px, 60vw);
+  height: 3px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--line-strong);
+}
+
+.launch-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: 3px;
+  background: var(--ignition);
+  animation: launch-run 1.1s ease-in-out infinite;
+}
+
+@keyframes launch-run {
+  from {
+    transform: translateX(-110%);
+  }
+  to {
+    transform: translateX(260%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .launch-bar::after {
+    animation: none;
+    width: 100%;
+  }
+}
+
+/* Plays and time on a game's page. */
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--mist);
+  font-size: 13px;
+}
+
+.stats b {
+  color: var(--paper);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.button.saved {
+  border-color: var(--accent);
+  color: var(--accent-soft);
+}
+
+.player-stage {
+  align-self: stretch;
+}
+
+.player.portrait .player-stage iframe {
+  flex: 0 0 auto;
+  height: 100%;
+}
