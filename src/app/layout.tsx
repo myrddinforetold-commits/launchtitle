@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 
+import { Backdrop } from "@/components/Backdrop";
 import { Shell } from "@/components/Shell";
 import { currentUser, xApp } from "@/lib/auth/current";
 import { canSubmit } from "@/lib/auth/sessions";
@@ -30,7 +31,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Urbanist:wght@500;600;700;800&display=swap" />
       </head>
       <body>
-        <div className="backdrop" aria-hidden="true" />
+        <Backdrop />
         <Shell
           user={user ? { handle: user.handle, role: user.role } : null}
           canSignIn={canSignIn}

@@ -72,7 +72,7 @@ Creators can pause and restore their own games. Admins can also remove a game, a
 Every five minutes Vercel calls `/api/cron/bot`, which runs one pass: read new mentions of the bot account, bring in games an admin has approved, post queued replies, and expire requests a creator never answered.
 
 - `@bot add` under a post with a game link asks to add your own game. `@bot add @creator` nominates someone else's, and waits for that creator to reply `yes` or `no` from their own account. `@bot remove`, from the creator, takes a live game down.
-- Nothing goes live without an admin approving it at `/admin`, where the game is also given its name.
+- Nothing goes live without an admin approving it at `/admin`, where the game is also given its name. Approve reads the game's code: a game that runs entirely in the browser is copied, and one that shows signs of needing a server is linked to play from its creator's site. The request records which was chosen and why. Copy and Link force one or the other.
 - A creator who says no is remembered: later requests for the same link are turned away.
 - Replies are plain text, except the one that says a game is live, which carries its link.
 - An admin connects the bot account once, from `/admin`. Its X tokens are kept in the `bot` table.

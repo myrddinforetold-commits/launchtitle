@@ -2,7 +2,7 @@ import { Accounts } from "../auth/sessions";
 import { refreshTokens, type XApp } from "../auth/x";
 import { getConfig } from "../config";
 import type { Sql } from "../db/sql";
-import { importUrl, linkGame } from "../import";
+import { importAuto, importUrl, linkGame } from "../import";
 import { openStores } from "../stores";
 import { titleGuess } from "./parse";
 import { runBot, type RunReport } from "./run";
@@ -32,11 +32,16 @@ export async function runLiveBot(sql: Sql, app: XApp): Promise<RunReport> {
       const creator = await accounts.ensure(nomination.creatorXId, nomination.creatorHandle);
       const title = nomination.title?.trim() || titleGuess(nomination.sourceUrl);
       const owner = { id: creator.id, admin: false };
-      const game =
-        nomination.mode === "link"
-          ? await linkGame(stores, title, nomination.sourceUrl, undefined, owner)
-          : await importUrl(stores, title, nomination.sourceUrl, undefined, owner);
-      return game.slug;
+      if (nomination.mode === "link") {
+        const game = await linkGame(stores, title, nomination.sourceUrl, undefined, owner);
+        return { slug: game.slug, note: "Linked, as chosen at approval." };
+      }
+      if (nomination.mode === "copy") {
+        const game = await importUrl(stores, title, nomination.sourceUrl, undefined, owner);
+        return { slug: game.slug, note: "Copied, as chosen at approval." };
+      }
+      const { game, note } = await importAuto(stores, title, nomination.sourceUrl, undefined, owner);
+      return { slug: game.slug, note };
     },
     async pauseGame(slug) {
       const game = await stores.repo.get(slug);

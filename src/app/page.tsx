@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { GameCard } from "@/components/GameCard";
-import { accounts } from "@/lib/auth/current";
+import { accounts, currentUser, xApp } from "@/lib/auth/current";
 import { isPlayable, type Game } from "@/lib/games";
 import { openStores } from "@/lib/stores";
 
@@ -26,12 +26,59 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
       ?.handles(games.flatMap((game) => (game.creatorId ? [game.creatorId] : [])))
       .catch(() => null)) ?? new Map<string, string>();
   const by = (game: Game) => (game.creatorId ? handles.get(game.creatorId) : undefined);
+  const user = await currentUser();
 
   return (
     <>
+      {!user && (
+        <section className="welcome">
+          <div className="welcome-copy">
+            <p className="kicker">Launch Title</p>
+            <h1>Every game deserves a launch.</h1>
+            <p>
+              A store for new web games. Press Play and you are in: no downloads, no installs, on a phone or a desk.
+              Found on X, hosted here, and built so the good ones get seen.
+            </p>
+            <div className="actions">
+              {games.length > 0 ? (
+                <a className="button primary" href="#games">
+                  BROWSE GAMES
+                </a>
+              ) : (
+                <a className="button primary" href={X_URL} rel="noopener">
+                  FOLLOW @LAUNCHTITLEGG
+                </a>
+              )}
+              <Link className="button" href="/creators">
+                Add your game
+              </Link>
+              {xApp() && (
+                <a className="button quiet" href="/api/auth/x/start">
+                  Sign in with X
+                </a>
+              )}
+            </div>
+          </div>
+          <ul className="pillars">
+            <li>
+              <b>Play instantly</b>
+              <span>Every game runs in your browser. Press Play.</span>
+            </li>
+            <li>
+              <b>New every week</b>
+              <span>Fresh games from independent creators, added as they launch.</span>
+            </li>
+            <li>
+              <b>Creators first</b>
+              <span>When a game earns, 80% goes to the person who made it.</span>
+            </li>
+          </ul>
+        </section>
+      )}
+
       <header className="page-head">
         <p className="crumb">Store</p>
-        <h1>{featured ? "Featured" : "Opening soon"}</h1>
+        <h2 className="page-title">{featured ? "Featured" : "Opening soon"}</h2>
       </header>
 
       {note && (
@@ -98,6 +145,27 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
         </section>
       )}
 
+      <section className="shelf" id="how">
+        <h2>How it works</h2>
+        <ol className="steps">
+          <li>
+            <span className="step-n">01</span>
+            <h3>Someone tags a game</h3>
+            <p>Reply to a game on X with @launchtitlegg add. Its creator says yes from their own account.</p>
+          </li>
+          <li>
+            <span className="step-n">02</span>
+            <h3>It lands here</h3>
+            <p>The game gets its own page and plays full screen, right in the store.</p>
+          </li>
+          <li>
+            <span className="step-n">03</span>
+            <h3>The best get a launch</h3>
+            <p>Each week the standout new games become Launch Titles, at the front of the store.</p>
+          </li>
+        </ol>
+      </section>
+
       <section className="strip">
         <div>
           <h2>Made a game?</h2>
@@ -107,6 +175,13 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
           For creators
         </Link>
       </section>
+
+      <footer className="foot">
+        <span>Launch Title</span>
+        <a href={X_URL} rel="noopener">
+          @launchtitlegg
+        </a>
+      </footer>
     </>
   );
 }

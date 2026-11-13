@@ -6,7 +6,8 @@ import { PgGameRepo } from "@/lib/db/games";
 import { migrate } from "@/lib/db/migrate";
 import type { Sql } from "@/lib/db/sql";
 import { isPlayable } from "@/lib/games";
-import { ImportError, importHtml, linkGame } from "@/lib/import";
+import { ImportError, importAuto, importHtml, linkGame } from "@/lib/import";
+import { serverSigns } from "@/lib/import/detect";
 import { framingBlocked, pageMeta } from "@/lib/import/meta";
 import { MemoryBlobStore } from "@/lib/storage";
 
@@ -142,8 +143,81 @@ describe("games that play from their creator's site", () => {
       postId: "1", conversationId: "1", nominatorXId: "5", nominatorHandle: "fan", creatorXId: "x1", creatorHandle: "maker",
       sourceUrl: "https://finders.gg/", state: "AWAITING_REVIEW",
     }))!;
-    expect(n.mode).toBe("copy");
+    expect(n.mode).toBe("auto");
     await bot.move(n.id, "AWAITING_REVIEW", "APPROVED", { title: "Finders", mode: "link" });
     expect((await bot.byId(n.id))!).toMatchObject({ state: "APPROVED", mode: "link", title: "Finders" });
+  });
+});
+
+describe("telling whether a game needs a server", () => {
+  const file = (name: string, text: string) => [name, new TextEncoder().encode(text)] as const;
+
+  it("finds nothing in a game that runs entirely in the browser", () => {
+    expect(
+      serverSigns([
+        file("index.html", "<canvas></canvas><script src=game.js></script>"),
+        file("game.js", "const api = 1; requestAnimationFrame(loop); localStorage.setItem('best', 3); fetch('levels/1.json')"),
+      ]),
+    ).toEqual([]);
+  });
+
+  it("spots live connections, multiplayer services, online databases and calls home", () => {
+    expect(serverSigns([file("a.js", 'const s = new WebSocket("wss://play.example/ws")')])).toEqual(["opens a live connection to a server"]);
+    expect(serverSigns([file("a.js", 'import { io } from "socket.io-client"')])).toEqual(["uses a multiplayer service"]);
+    expect(serverSigns([file("a.js", 'createClient("https://abc.supabase.co", key)')])).toEqual(["uses an online database or accounts"]);
+    expect(serverSigns([file("a.js", 'await fetch("/api/score", { method: "POST" })')])).toEqual(["calls its own server"]);
+  });
+
+  it("only reads code, not art or data", () => {
+    expect(serverSigns([file("notes.txt", "new WebSocket("), file("sprite.png", "socket.io")])).toEqual([]);
+  });
+});
+
+describe("approving a game without choosing how", () => {
+  let repo: PgGameRepo;
+  const store = new MemoryBlobStore();
+  const maker = { id: "1", admin: false };
+
+  /** A creator's site with one page and one script. */
+  function gameSite(script: string, headers: Record<string, string> = {}) {
+    return (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/game.js")) return new Response(script, { status: 200, headers: { "content-type": "text/javascript" } });
+      if (url.endsWith("/share.png")) return new Response(PNG as BodyInit, { status: 200, headers: { "content-type": "image/png" } });
+      return new Response(PAGE.replace("</body>", '<script src="game.js"></script></body>'), {
+        status: 200,
+        headers: { "content-type": "text/html", ...headers },
+      });
+    }) as typeof fetch;
+  }
+
+  beforeEach(async () => {
+    const sql = pgliteSql(new PGlite());
+    await migrate(sql);
+    await sql.query("INSERT INTO users (x_account_id, handle) VALUES ('x1','maker')");
+    repo = new PgGameRepo(sql);
+  });
+
+  it("copies a game that runs entirely in the browser", async () => {
+    const result = await importAuto({ repo, store }, "Ember Catch", "https://ember.example/", { fetchImpl: gameSite("requestAnimationFrame(loop)") }, maker);
+    expect(result.how).toBe("copy");
+    expect(result.note).toBe("Copied: the game runs entirely in the browser.");
+    expect(result.game.externalUrl).toBeUndefined();
+    expect(Object.keys(result.game.versions[0].manifest).sort()).toEqual(["game.js", "index.html", "share.png"]);
+  });
+
+  it("links a game that needs its server, and says why", async () => {
+    const result = await importAuto({ repo, store }, "Finders", "https://finders.example/", { fetchImpl: gameSite('new WebSocket("wss://finders.example/world")') }, maker);
+    expect(result.how).toBe("link");
+    expect(result.note).toBe("Linked: the game opens a live connection to a server.");
+    expect(result.game).toMatchObject({ externalUrl: "https://finders.example/", versions: [] });
+  });
+
+  it("copies with a warning when a server game's site refuses to be shown here", async () => {
+    const fetchImpl = gameSite('fetch("/api/save")', { "x-frame-options": "DENY" });
+    const result = await importAuto({ repo, store }, "Locked", "https://locked.example/", { fetchImpl }, maker);
+    expect(result.how).toBe("copy");
+    expect(result.note).toMatch(/calls its own server.*may not fully work/);
+    expect(result.game.versions).toHaveLength(1);
   });
 });
