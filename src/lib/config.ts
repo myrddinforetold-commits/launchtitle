@@ -5,6 +5,8 @@ export function getConfig() {
   return {
     /** Where the local stores keep their files. */
     dataDir: process.env.LT_DATA_DIR ?? path.join(process.cwd(), ".data"),
+    /** Postgres connection string. Without it, game records go to a local file. */
+    databaseUrl: process.env.DATABASE_URL || undefined,
     /**
      * Host that serves game files. Each game lives at `{slug}.{playHost}`.
      * In production this must be a different registrable domain from the app,
