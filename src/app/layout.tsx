@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 
+import { currentUser, xApp } from "@/lib/auth/current";
 import { getConfig } from "@/lib/config";
 
 import "./globals.css";
@@ -17,8 +18,10 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = { themeColor: "#070b14" };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const { openImport } = getConfig();
+  const canSignIn = xApp() !== null;
+  const user = canSignIn ? await currentUser() : null;
   return (
     <html lang="en">
       <head>
@@ -39,9 +42,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </Link>
           <nav>
             {openImport && <Link href="/submit">Submit a game</Link>}
-            <a href={X_URL} rel="noopener">
-              Follow on X
-            </a>
+            {user ? (
+              <form action="/api/auth/signout" method="post" className="who">
+                <span>@{user.handle}</span>
+                <button type="submit">Sign out</button>
+              </form>
+            ) : canSignIn ? (
+              <a href="/api/auth/x/start">Sign in with X</a>
+            ) : (
+              <a href={X_URL} rel="noopener">
+                Follow on X
+              </a>
+            )}
           </nav>
         </header>
         <main>{children}</main>

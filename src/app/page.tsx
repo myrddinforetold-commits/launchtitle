@@ -30,7 +30,15 @@ const STEPS = [
   },
 ];
 
-export default async function Home() {
+const SIGNIN_NOTES: Record<string, string> = {
+  cancelled: "Sign-in was cancelled.",
+  expired: "That sign-in took too long. Try again.",
+  failed: "X could not confirm the sign-in. Try again.",
+  unavailable: "Sign-in is not available right now.",
+};
+
+export default async function Home({ searchParams }: { searchParams: Promise<{ signin?: string }> }) {
+  const note = SIGNIN_NOTES[(await searchParams).signin ?? ""];
   const games = (await openStores().repo.list()).filter((game) => SERVED_STATES.has(game.state));
   const open = games.length > 0;
 
@@ -39,6 +47,11 @@ export default async function Home() {
       <section className="hero">
         <div className="hero-art" aria-hidden="true" />
         <div className="hero-copy">
+          {note && (
+            <p className="notice error" role="status">
+              {note}
+            </p>
+          )}
           <p className="eyebrow">{open ? "Now playing" : "Opening soon"}</p>
           <h1>Every game deserves a launch.</h1>
           <p className="hero-lede">

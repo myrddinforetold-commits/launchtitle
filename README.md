@@ -33,6 +33,7 @@ npm run lint
 | --- | --- | --- |
 | `DATABASE_URL` | unset | Postgres connection string. Unset, game records go to a JSON file in `LT_DATA_DIR` |
 | `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | unset | Cloudflare R2 bucket for game files. Unless all four are set, files go to `LT_DATA_DIR` |
+| `X_CLIENT_ID`, `X_CLIENT_SECRET` | unset | The X app's OAuth 2.0 client, for sign-in. Unset, sign-in is switched off |
 | `LT_DATA_DIR` | `./.data` | Local fallback for game files and game records |
 | `LT_PLAY_HOST` | `play.localhost:4001` | Host that serves games, at `{slug}.<host>` |
 | `LT_PLAY_SCHEME` | `http` | `https` in production |
@@ -46,6 +47,10 @@ Game records live in Postgres (Neon, attached to the Vercel project as `launchti
 Preview deployments share the production database for now, so preview builds do not migrate. Give previews their own Neon branch before a second person works on the schema.
 
 Tests run against a real Postgres inside the test process, so they need no database.
+
+### Sign-in
+
+People sign in with X (OAuth 2.0 with PKCE). We ask only to read who they are, match them on X's permanent account id, and keep the session in Postgres: the cookie holds a random value and the database holds only its hash. The X app's callback address must be `{LT_APP_ORIGIN}/api/auth/x/callback`.
 
 ### File storage
 

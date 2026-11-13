@@ -9,6 +9,9 @@ export function getConfig() {
     databaseUrl: process.env.DATABASE_URL || undefined,
     /** Cloudflare R2 bucket for game files. Unless all four are set, files stay on local disk. */
     r2: readR2(),
+    /** The X app used for sign-in. Without both, sign-in is switched off. */
+    xClientId: process.env.X_CLIENT_ID?.trim() || undefined,
+    xClientSecret: process.env.X_CLIENT_SECRET?.trim() || undefined,
     /**
      * Host that serves game files. Each game lives at `{slug}.{playHost}`.
      * In production this must be a different registrable domain from the app,

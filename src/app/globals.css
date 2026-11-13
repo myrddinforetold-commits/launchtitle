@@ -93,6 +93,30 @@ input:focus-visible {
   font-weight: 700;
 }
 
+.who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.who span {
+  padding: 0 4px 0 8px;
+  font-weight: 700;
+}
+
+.who button {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  color: var(--paper);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 main {
   display: block;
 }
