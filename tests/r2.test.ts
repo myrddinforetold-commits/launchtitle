@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { R2BlobStore } from "@/lib/r2";
+import { addVersion, buildVersion, type Game } from "@/lib/games";
+import { R2BlobStore, R2LiveIndex } from "@/lib/r2";
 import { sha256 } from "@/lib/storage";
 
 /** Stands in for R2: remembers what was stored and what was asked. */
@@ -75,5 +76,23 @@ describe("R2 file storage", () => {
     const store = new R2BlobStore({ ...options, fetch: denied });
     await expect(store.put(bytes)).rejects.toThrow(/403/);
     await expect(store.get(sha256(bytes))).rejects.toThrow(/403/);
+  });
+
+  it("publishes which build of a game is live", async () => {
+    const r2 = fakeR2();
+    const store = new R2BlobStore({ ...options, fetch: r2.fetch });
+    const version = await buildVersion(store, new Map([["index.html", bytes]]), { kind: "zip" });
+    const game: Game = addVersion(
+      { slug: "lantern-bay", title: "Lantern Bay", state: "HOSTED", versions: [], activeVersionId: null, createdAt: "" },
+      version,
+    );
+    await new R2LiveIndex({ ...options, fetch: r2.fetch }).publish(game);
+    const record = JSON.parse(new TextDecoder().decode(r2.objects.get("/games/live/lantern-bay.json")));
+    expect(record).toEqual({
+      slug: "lantern-bay",
+      state: "HOSTED",
+      version: version.id,
+      files: { "index.html": { hash: sha256(bytes), type: "text/html; charset=utf-8", size: bytes.byteLength } },
+    });
   });
 });

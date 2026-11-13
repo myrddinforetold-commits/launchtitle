@@ -47,7 +47,10 @@ export interface GameRepo {
   save(game: Game): Promise<void>;
 }
 
-const RESERVED = new Set(["www", "api", "app", "admin", "play", "static", "assets", "cdn"]);
+/** The health check publishes a tiny built-in page under this address. No game may take it. */
+export const PROBE_SLUG = "lt-probe";
+
+const RESERVED = new Set(["www", "api", "app", "admin", "play", "static", "assets", "cdn", PROBE_SLUG]);
 
 /** A slug is also the game's subdomain, so it must be a valid DNS label. */
 export function isValidSlug(slug: string): boolean {

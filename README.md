@@ -49,11 +49,16 @@ Tests run against a real Postgres inside the test process, so they need no datab
 
 ### File storage
 
-Game files live in a private Cloudflare R2 bucket (`launchtitle-games`), keyed by the hash of their contents. `GET /api/health` reports whether the deployment can reach its database and its bucket.
+Game files live in a private Cloudflare R2 bucket (`launchtitle-games`), keyed by the hash of their contents. The app also writes one small file per game, `live/{slug}.json`, saying which build is live.
+
+### Play domain
+
+`worker/` is a Cloudflare Worker on `*.launchtitle.games`. It reads the bucket and nothing else: the live file tells it which files a game has, and it serves them with the same rules as the local play server (read-only, no cookies, framing limited to the store). It has no dependencies and is deployed exactly as written, with `npx wrangler deploy` from `worker/`.
+
+`GET /api/health` reports whether the deployment can reach its database, its bucket and the play domain. For the last, it publishes a tiny built-in page at `lt-probe.launchtitle.games` and loads it.
 
 ### What milestone 1 still needs
 
-- The play server deployed on `launchtitle.games`, reading the same bucket.
 - Imports that fit a hosted deployment: uploads go straight to the bucket, since a request to the app is capped at a few megabytes.
 - The scan, boot test and screenshot steps of the import pipeline.
 - A browser test proving a game frame cannot read the app's cookies or storage. Today's tests prove the server side of that: separate origins, no cookies, framing limited to the app.
@@ -70,7 +75,8 @@ Game files live in a private Cloudflare R2 bucket (`launchtitle-games`), keyed b
 | `brand/logo/` | The logo family as SVG and PNG, with usage rules |
 | `brand/tools/build_logo.py` | The script that builds the logo files from the mark's geometry |
 | `design/` | Reference screens and placeholder artwork for the console shell |
-| `src/`, `play/`, `tests/` | The app, the play server and their tests |
+| `src/`, `play/`, `tests/` | The app, the local play server and their tests |
+| `worker/` | The play domain: the Cloudflare Worker that serves games on `launchtitle.games` |
 | `db/migrations/`, `scripts/` | Database schema changes and the script that applies them |
 
 ## Where to start building
