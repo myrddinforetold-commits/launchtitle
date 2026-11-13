@@ -1,11 +1,12 @@
 import Link from "next/link";
 
 import type { Game } from "@/lib/games";
+import { playsLabel } from "@/lib/plays";
 
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 
 /** A tall card: the game's cover, a badge, and its name on a glass strip. */
-export function GameCard({ game, by, badge }: { game: Game; by?: string; badge?: string }) {
+export function GameCard({ game, by, badge, plays }: { game: Game; by?: string; badge?: string; plays?: number }) {
   const fresh = Date.now() - Date.parse(game.createdAt) < WEEK;
   const label = badge ?? (fresh ? "NEW" : undefined);
   return (
@@ -21,7 +22,7 @@ export function GameCard({ game, by, badge }: { game: Game; by?: string; badge?:
       {label && <span className="card-badge">{label}</span>}
       <span className="card-title">
         <strong>{game.title}</strong>
-        {by && <small>@{by}</small>}
+        {(by || plays) && <small>{[by && `@${by}`, plays ? playsLabel(plays) : null].filter(Boolean).join(" · ")}</small>}
       </span>
     </Link>
   );

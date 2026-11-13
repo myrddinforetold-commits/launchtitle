@@ -4,10 +4,11 @@ import { notFound } from "next/navigation";
 
 import { GameCard } from "@/components/GameCard";
 import { Player } from "@/components/Player";
-import { accounts, currentUser } from "@/lib/auth/current";
+import { accounts, currentUser, plays, xApp } from "@/lib/auth/current";
 import { GAME_FRAME_ALLOW, GAME_FRAME_SANDBOX, LINKED_FRAME_SANDBOX, playUrl } from "@/lib/frame";
 import { activeVersion, isPlayable, SERVED_STATES } from "@/lib/games";
 import { canManage, MAX_DESCRIPTION, mayMove } from "@/lib/manage";
+import { playsLabel } from "@/lib/plays";
 import { openStores } from "@/lib/stores";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +44,10 @@ export default async function GamePage({ params, searchParams }: Props) {
   const playable = isPlayable(game);
   const others = (await openStores().repo.list()).filter((other) => other.slug !== game.slug && isPlayable(other)).slice(0, 8);
   const cover = game.cover ? `/media/${game.cover.hash}` : null;
+  const store = await plays().catch(() => null);
+  const stats = (await store?.stats().catch(() => null))?.get(game.slug);
+  const saved = user && store ? (await store.savedFor(user.id).catch(() => [] as string[])).includes(game.slug) : false;
+  const minutes = stats ? Math.round(stats.seconds / 60) : 0;
 
   return (
     <>
@@ -71,6 +76,18 @@ export default async function GamePage({ params, searchParams }: Props) {
             </p>
           )}
           {game.description && <p className="hero-lede">{game.description}</p>}
+          {stats && stats.plays > 0 && (
+            <ul className="stats">
+              <li>
+                <b>{playsLabel(stats.plays).split(" ")[0]}</b> {stats.plays === 1 ? "play" : "plays"}
+              </li>
+              {minutes >= 1 && (
+                <li>
+                  <b>{minutes < 120 ? minutes : Math.round(minutes / 60)}</b> {minutes < 120 ? (minutes === 1 ? "minute" : "minutes") : "hours"} played
+                </li>
+              )}
+            </ul>
+          )}
           <div className="actions">
             {playable ? (
               <Player
@@ -79,9 +96,24 @@ export default async function GamePage({ params, searchParams }: Props) {
                 sandbox={game.externalUrl ? LINKED_FRAME_SANDBOX : GAME_FRAME_SANDBOX}
                 allow={GAME_FRAME_ALLOW}
                 portrait={game.display === "portrait"}
+                slug={game.slug}
+                cover={cover ?? undefined}
               />
             ) : (
               <p className="notice">This game is not playable right now. Only you and the Launch Title team can see this page.</p>
+            )}
+            {playable && user && store && (
+              <form action={`/api/games/${game.slug}/save`} method="post">
+                <input type="hidden" name="action" value={saved ? "unsave" : "save"} />
+                <button type="submit" className={saved ? "button saved" : "button"}>
+                  {saved ? "Saved to library" : "Save to library"}
+                </button>
+              </form>
+            )}
+            {playable && !user && xApp() && (
+              <a className="button quiet" href="/api/auth/x/start">
+                Sign in to save
+              </a>
             )}
           </div>
         </div>

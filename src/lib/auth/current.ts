@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 
 import { getConfig } from "../config";
 import { connect } from "../db/sql";
+import { Plays } from "../plays";
 import { Accounts, type User } from "./sessions";
 import type { XApp } from "./x";
 
@@ -19,6 +20,12 @@ export function xApp(): XApp | null {
 export async function accounts(): Promise<Accounts | null> {
   const { databaseUrl } = getConfig();
   return databaseUrl ? new Accounts(await connect(databaseUrl)) : null;
+}
+
+/** Play counts and saved games need the database. Without it they are simply absent. */
+export async function plays(): Promise<Plays | null> {
+  const { databaseUrl } = getConfig();
+  return databaseUrl ? new Plays(await connect(databaseUrl)) : null;
 }
 
 /** The signed-in person, or null. A failure to reach the database reads as signed out rather than breaking the page. */
