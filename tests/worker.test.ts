@@ -14,9 +14,10 @@ function fakeBucket() {
   const objects = new Map<string, Uint8Array>();
   return {
     objects,
-    async get(key: string) {
-      const bytes = objects.get(key);
-      if (!bytes) return null;
+    async get(key: string, options?: { range?: { offset: number; length: number } }) {
+      const whole = objects.get(key);
+      if (!whole) return null;
+      const bytes = options?.range ? whole.slice(options.range.offset, options.range.offset + options.range.length) : whole;
       return { body: bytes, size: bytes.byteLength, json: async () => JSON.parse(new TextDecoder().decode(bytes)) };
     },
     async head(key: string) {
@@ -122,5 +123,39 @@ describe("play domain worker", () => {
       const { ask } = await setup(state);
       expect((await ask("https://lantern-bay.launchtitle.games/")).status).toBe(410);
     }
+  });
+
+  it("sends part of a file when asked, as phones require for sound and video", async () => {
+    const { ask } = await setup();
+    const url = "https://lantern-bay.launchtitle.games/assets/game.js";
+    const whole = "console.log('play')";
+
+    const full = await ask(url);
+    expect(full.headers.get("accept-ranges")).toBe("bytes");
+    expect(full.headers.get("content-length")).toBe(String(whole.length));
+
+    const first = await ask(url, { headers: { range: "bytes=0-1" } });
+    expect(first.status).toBe(206);
+    expect(first.headers.get("content-range")).toBe(`bytes 0-1/${whole.length}`);
+    expect(first.headers.get("content-length")).toBe("2");
+    expect(await first.text()).toBe("co");
+
+    const rest = await ask(url, { headers: { range: "bytes=8-" } });
+    expect(rest.status).toBe(206);
+    expect(await rest.text()).toBe(whole.slice(8));
+
+    const tail = await ask(url, { headers: { range: "bytes=-6" } });
+    expect(await tail.text()).toBe(whole.slice(-6));
+
+    const beyond = await ask(url, { headers: { range: "bytes=0-99999" } });
+    expect(beyond.headers.get("content-range")).toBe(`bytes 0-${whole.length - 1}/${whole.length}`);
+
+    const past = await ask(url, { headers: { range: "bytes=500-" } });
+    expect(past.status).toBe(416);
+    expect(past.headers.get("content-range")).toBe(`bytes */${whole.length}`);
+
+    const odd = await ask(url, { headers: { range: "bytes=0-1,4-5" } });
+    expect(odd.status).toBe(200);
+    expect(await odd.text()).toBe(whole);
   });
 });

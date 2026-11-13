@@ -112,7 +112,7 @@ describe("game frame", () => {
     for (const denied of ["allow-top-navigation", "allow-popups", "allow-forms", "allow-modals"]) {
       expect(granted).not.toContain(denied);
     }
-    expect(GAME_FRAME_ALLOW).toBe("fullscreen; gamepad");
+    expect(GAME_FRAME_ALLOW).toBe("fullscreen; gamepad; autoplay");
   });
 
   it("is always loaded from a different origin than the app", () => {
