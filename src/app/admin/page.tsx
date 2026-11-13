@@ -4,6 +4,10 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 
 import { accounts, currentUser } from "@/lib/auth/current";
+import { BotStore } from "@/lib/bot/store";
+import { titleGuess } from "@/lib/bot/parse";
+import { getConfig } from "@/lib/config";
+import { connect } from "@/lib/db/sql";
 import { openStores } from "@/lib/stores";
 
 export const dynamic = "force-dynamic";
@@ -19,16 +23,96 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const games = await openStores().repo.list();
   const handle = new Map(users.map((user) => [user.id, user.handle]));
   const { note } = await searchParams;
+  const { databaseUrl, botHandle } = getConfig();
+  const botStore = databaseUrl ? new BotStore(await connect(databaseUrl)) : null;
+  const bot = (await botStore?.account()) ?? null;
+  const nominations = (await botStore?.recent(60)) ?? [];
+  const sentToday = bot && botStore ? await botStore.repliesSentSince(new Date(Date.now() - 24 * 60 * 60 * 1000)) : 0;
+  const lastCheck = bot && bot.pollStartedAt.getTime() > 0 ? bot.pollStartedAt.toISOString().slice(0, 16).replace("T", " ") + " UTC" : "never";
+  const guess = (url: string) => {
+    try {
+      return titleGuess(url);
+    } catch {
+      return "";
+    }
+  };
 
   return (
     <>
-      <h1>Games</h1>
-      <p className="lede">Every game, including paused and removed ones. A paused or removed game stops being served at once.</p>
+      <h1>Requests from X</h1>
       {note && (
         <p className="notice" role="status">
           {note}
         </p>
       )}
+      <p className="lede">
+        {bot ? (
+          <>
+            The bot posts as <b>@{bot.handle}</b>. Last check: {lastCheck}. Replies in the last 24 hours: {sentToday}.{" "}
+            <a href="/api/auth/x/start?bot=1">Reconnect</a>
+          </>
+        ) : (
+          <>
+            The bot is not connected. Sign in to X as <b>@{botHandle}</b> in this browser, then{" "}
+            <a href="/api/auth/x/start?bot=1">connect the bot account</a>.
+          </>
+        )}
+      </p>
+      {nominations.length === 0 ? (
+        <p className="empty">No requests yet. They appear here when someone tags @{botHandle} with add.</p>
+      ) : (
+        <table className="people">
+          <thead>
+            <tr>
+              <th scope="col">Game</th>
+              <th scope="col">Status</th>
+              <th scope="col">Decide</th>
+            </tr>
+          </thead>
+          <tbody>
+            {nominations.map((n) => (
+              <tr key={n.id}>
+                <td>
+                  <b>{n.sourceUrl ? <a href={n.sourceUrl} rel="noopener noreferrer nofollow" target="_blank">{n.sourceUrl.replace(/^https:\/\//, "").slice(0, 60)}</a> : "No link given"}</b>
+                  <span>
+                    Creator @{n.creatorHandle}
+                    {n.nominatorHandle !== n.creatorHandle && <>, asked by @{n.nominatorHandle}</>}.{" "}
+                    <a href={`https://x.com/i/status/${n.postId}`} rel="noopener noreferrer" target="_blank">
+                      The post
+                    </a>
+                  </span>
+                </td>
+                <td>
+                  {n.state.toLowerCase().replace(/_/g, " ")}
+                  {n.gameSlug && (
+                    <span>
+                      <Link href={`/games/${n.gameSlug}`}>{n.gameSlug}</Link>
+                    </span>
+                  )}
+                  {n.error && <span>{n.error}</span>}
+                </td>
+                <td>
+                  {(n.state === "AWAITING_REVIEW" || n.state === "FAILED") && (
+                    <form action="/api/admin/nominations" method="post">
+                      <input type="hidden" name="id" value={n.id} />
+                      <input name="title" defaultValue={n.title ?? guess(n.sourceUrl)} maxLength={80} aria-label="Name for the game" required />
+                      <button type="submit" name="action" value="approve">
+                        Approve
+                      </button>
+                      <button type="submit" name="action" value="reject" formNoValidate>
+                        Turn down
+                      </button>
+                    </form>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <h2>Games</h2>
+      <p className="lede">Every game, including paused and removed ones. A paused or removed game stops being served at once.</p>
       <table className="people">
         <thead>
           <tr>

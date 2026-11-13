@@ -42,6 +42,17 @@ export class Accounts {
     return toUser(rows[0]);
   }
 
+  /** Make sure a creator has a user row before they have ever signed in, so their game is theirs when they do. */
+  async ensure(xAccountId: string, handle: string): Promise<User> {
+    const rows = await this.sql.query<UserRow>(
+      `INSERT INTO users (x_account_id, handle) VALUES ($1, $2)
+       ON CONFLICT (x_account_id) DO UPDATE SET handle = EXCLUDED.handle
+       RETURNING id, x_account_id, handle, name, role`,
+      [xAccountId, handle],
+    );
+    return toUser(rows[0]);
+  }
+
   async byId(id: string): Promise<User | null> {
     if (!/^\d{1,18}$/.test(id)) return null;
     const rows = await this.sql.query<UserRow>("SELECT id, x_account_id, handle, name, role FROM users WHERE id = $1", [id]);

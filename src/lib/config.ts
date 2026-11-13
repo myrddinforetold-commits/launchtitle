@@ -13,6 +13,10 @@ export function getConfig() {
     xClientId: process.env.X_CLIENT_ID?.trim() || undefined,
     xClientSecret: process.env.X_CLIENT_SECRET?.trim() || undefined,
     /** X handles that become admins when they sign in. How the first admin exists at all. */
+    /** The X account the bot reads mentions of and posts as. */
+    botHandle: (process.env.LT_BOT_HANDLE ?? "launchtitlegg").trim().replace(/^@/, ""),
+    /** The most replies the bot may post in any 24 hours. Each costs money. */
+    botDailyReplies: Number(process.env.LT_BOT_DAILY_REPLIES ?? 100) || 100,
     adminHandles: (process.env.LT_ADMIN_HANDLES ?? "")
       .split(",")
       .map((h) => h.trim().replace(/^@/, "").toLowerCase())

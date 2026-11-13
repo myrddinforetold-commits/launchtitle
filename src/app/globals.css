@@ -804,3 +804,28 @@ button.button {
 .hero:has(.hero-art.covered) {
   background: linear-gradient(180deg, var(--void) 84%, var(--deck) 100%);
 }
+
+table.people input[name="title"] {
+  min-height: 44px;
+  min-width: 0;
+  flex: 1 1 140px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--navy);
+  color: var(--paper);
+  font: inherit;
+}
+
+table.people form {
+  flex-wrap: wrap;
+}
+
+table.people + h2,
+.empty + h2 {
+  margin-top: 40px;
+}
+
+.empty {
+  max-width: 720px;
+}

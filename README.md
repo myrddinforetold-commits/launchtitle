@@ -35,6 +35,8 @@ npm run lint
 | `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | unset | Cloudflare R2 bucket for game files. Unless all four are set, files go to `LT_DATA_DIR` |
 | `X_CLIENT_ID`, `X_CLIENT_SECRET` | unset | The X app's OAuth 2.0 client, for sign-in. Unset, sign-in is switched off |
 | `LT_ADMIN_HANDLES` | unset | X handles, comma-separated, that become admins when they sign in |
+| `LT_BOT_HANDLE` | `launchtitlegg` | The X account the bot reads mentions of and posts as |
+| `LT_BOT_DAILY_REPLIES` | `100` | The most replies the bot may post in any 24 hours |
 | `LT_DATA_DIR` | `./.data` | Local fallback for game files and game records |
 | `LT_PLAY_HOST` | `play.localhost:4001` | Host that serves games, at `{slug}.<host>` |
 | `LT_PLAY_SCHEME` | `http` | `https` in production |
@@ -62,6 +64,17 @@ The bucket needs a CORS rule allowing `PUT` from the store's origin.
 A game can arrive four ways: a zip, a single HTML page, pasted code, or a link to where it is already hosted (the app copies its static files). Each game has a description and a cover image, shown on its page and on the store's front. Cover images are served from `/media/{hash}`, which answers only for real PNG, JPEG or WebP data, so game files in the same storage can never be reached from the store's own address.
 
 Creators can pause and restore their own games. Admins can also remove a game, at `/admin`. A paused or removed game stops being served at once.
+
+### The tag-to-add bot
+
+Every five minutes Vercel calls `/api/cron/bot`, which runs one pass: read new mentions of the bot account, bring in games an admin has approved, post queued replies, and expire requests a creator never answered.
+
+- `@bot add` under a post with a game link asks to add your own game. `@bot add @creator` nominates someone else's, and waits for that creator to reply `yes` or `no` from their own account. `@bot remove`, from the creator, takes a live game down.
+- Nothing goes live without an admin approving it at `/admin`, where the game is also given its name.
+- A creator who says no is remembered: later requests for the same link are turned away.
+- Replies are plain text, except the one that says a game is live, which carries its link.
+- An admin connects the bot account once, from `/admin`. Its X tokens are kept in the `bot` table.
+- The pass needs no secret. It never runs more than once a minute, and calling it by hand does nothing the schedule would not.
 
 ### File storage
 
