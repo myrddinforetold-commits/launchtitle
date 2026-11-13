@@ -43,7 +43,7 @@ describe("Postgres game store", () => {
   it("applies migrations once", async () => {
     expect(await migrate(sql)).toEqual([]);
     const rows = await sql.query<{ name: string }>("SELECT name FROM schema_migrations");
-    expect(rows.map((r) => r.name).sort()).toEqual(["0001_games.sql", "0002_users.sql", "0003_game_creator.sql", "0004_game_details.sql", "0005_bot.sql", "0006_linked_games.sql", "0007_game_display.sql"]);
+    expect(rows.map((r) => r.name).sort()).toEqual(["0001_games.sql", "0002_users.sql", "0003_game_creator.sql", "0004_game_details.sql", "0005_bot.sql", "0006_linked_games.sql", "0007_game_display.sql", "0008_auto_mode.sql"]);
   });
 
   it("returns nothing for a game it does not have", async () => {

@@ -26,9 +26,8 @@ export async function POST(request: NextRequest) {
   // A failed import can be approved again; everything else is decided once.
   const from = nomination.state === "FAILED" ? "FAILED" : "AWAITING_REVIEW";
   let ok = false;
-  if ((action === "approve" || action === "approve-link") && title) {
-    ok = await store.move(id, from, "APPROVED", { title, mode: action === "approve-link" ? "link" : "copy" });
-  }
+  const modes: Record<string, "auto" | "copy" | "link"> = { approve: "auto", "approve-copy": "copy", "approve-link": "link" };
+  if (modes[action] && title) ok = await store.move(id, from, "APPROVED", { title, mode: modes[action] });
   else if (action === "reject") ok = await store.move(id, from, "REJECTED");
   console.log(`admin: @${me.handle} ${action} nomination ${id}: ${ok ? "done" : "no change"}`);
   page.searchParams.set(

@@ -5,6 +5,7 @@ import { sniffImage } from "../images";
 import type { BlobStore } from "../storage";
 import { getConfig } from "../config";
 import { crawlSite, isPrivateHost, type CrawlOptions } from "./crawl";
+import { serverSigns } from "./detect";
 import { fetchCover, framingBlocked, pageMeta } from "./meta";
 import { filesFromZip } from "./zip";
 
@@ -103,6 +104,41 @@ export async function importUrl(
   const game = await publish(deps, title, files, { kind: "crawl", url }, externalDomains, owner);
   const index = files.find(([name]) => name === "index.html");
   return index ? autofill(deps, game, new TextDecoder().decode(index[1]), url, options) : game;
+}
+
+export type AutoResult = { game: Game; how: "copy" | "link"; note: string };
+
+/**
+ * Bring a game in by link, choosing the way that suits it. The game's files
+ * are fetched once. If its code shows it needs a server, it is linked to play
+ * from its creator's site; otherwise the files are copied and hosted here.
+ * A game that needs a server but whose site refuses to be framed is copied
+ * anyway, with a note, so a person can sort it out.
+ */
+export async function importAuto(deps: Deps, title: string, url: string, options?: CrawlOptions, owner?: Owner): Promise<AutoResult> {
+  const { files, externalDomains } = await crawlSite(url, options);
+  const signs = serverSigns(files);
+
+  if (signs.length > 0) {
+    try {
+      const game = await linkGame(deps, title, url, options, owner);
+      return { game, how: "link", note: `Linked: the game ${signs.join(", and ")}.` };
+    } catch (error) {
+      if (!(error instanceof ImportError) || error.code !== "blocked_host") throw error;
+      // Falls through to a copy. Better listed and imperfect than not listed, and the note says why.
+    }
+  }
+
+  const game = await publish(deps, title, files, { kind: "crawl", url }, externalDomains, owner);
+  const index = files.find(([name]) => name === "index.html");
+  const filled = index ? await autofill(deps, game, new TextDecoder().decode(index[1]), url, options) : game;
+  return {
+    game: filled,
+    how: "copy",
+    note: signs.length
+      ? `Copied, but the game ${signs.join(", and ")}, and its site does not allow being shown here. It may not fully work.`
+      : "Copied: the game runs entirely in the browser.",
+  };
 }
 
 /**

@@ -25,7 +25,7 @@ export type Nomination = {
   gameSlug: string | null;
   error: string | null;
   /** How to bring the game in once approved: copy its files, or play it from the creator's site. */
-  mode: "copy" | "link";
+  mode: "auto" | "copy" | "link";
   createdAt: string;
 };
 
@@ -53,7 +53,7 @@ type NomRow = {
   title: string | null;
   game_slug: string | null;
   error: string | null;
-  mode: "copy" | "link";
+  mode: "auto" | "copy" | "link";
   created_at: Date | string;
 };
 
@@ -192,7 +192,7 @@ export class BotStore {
     id: string,
     from: NominationState,
     to: NominationState,
-    set: { title?: string; gameSlug?: string; error?: string; mode?: "copy" | "link" } = {},
+    set: { title?: string; gameSlug?: string; error?: string; mode?: "auto" | "copy" | "link" } = {},
   ): Promise<boolean> {
     const rows = await this.sql.query(
       `UPDATE nominations

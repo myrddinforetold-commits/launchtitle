@@ -11,8 +11,8 @@ export type RunDeps = {
   dailyReplies: number;
   /** Get a new access token from the refresh token. X replaces the refresh token each time. */
   refresh(refreshToken: string): Promise<{ access: string; refresh: string; expiresAt: Date }>;
-  /** Copy the game's files in and return its address in the store. */
-  importGame(nomination: Nomination): Promise<string>;
+  /** Bring the game in and return its address in the store, with a note on how it was done. */
+  importGame(nomination: Nomination): Promise<{ slug: string; note?: string }>;
   pauseGame(slug: string): Promise<boolean>;
   now?: () => Date;
 };
@@ -66,8 +66,8 @@ export async function runBot(deps: RunDeps): Promise<RunReport> {
   // 2. Games a person has approved. A couple per pass, so one pass stays short.
   for (const nomination of await store.inState("APPROVED", 2)) {
     try {
-      const slug = await deps.importGame(nomination);
-      if (await store.move(nomination.id, "APPROVED", "LIVE", { gameSlug: slug })) {
+      const { slug, note } = await deps.importGame(nomination);
+      if (await store.move(nomination.id, "APPROVED", "LIVE", { gameSlug: slug, error: note })) {
         await store.queueReply(nomination.postId, SAY.live(`${deps.appOrigin}/games/${slug}`, nomination.creatorHandle));
         report.imported += 1;
       }

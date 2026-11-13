@@ -197,7 +197,7 @@ describe("a pass of the bot", () => {
       appOrigin: "https://launchtitle.gg",
       dailyReplies: 100,
       refresh: async () => (refreshed++, { access: "new-access", refresh: "new-refresh", expiresAt: new Date(now.getTime() + 7200_000) }),
-      importGame: async (n) => (imports.push(n.sourceUrl), "the-game"),
+      importGame: async (n) => (imports.push(n.sourceUrl), { slug: "the-game", note: "Copied: the game runs entirely in the browser." }),
       pauseGame: async () => true,
       now: () => now,
       ...over,
@@ -245,7 +245,11 @@ describe("a pass of the bot", () => {
     expect(await run()).toMatchObject({ imported: 1, replies: 1 });
     expect(imports).toEqual([GAME]);
     expect(sent.at(-1)).toEqual({ to: ask.id, text: SAY.live("https://launchtitle.gg/games/the-game", "maker") });
-    expect((await store.recent())[0]).toMatchObject({ state: "LIVE", gameSlug: "the-game" });
+    expect((await store.recent())[0]).toMatchObject({
+      state: "LIVE",
+      gameSlug: "the-game",
+      error: "Copied: the game runs entirely in the browser.",
+    });
   });
 
   it("records a failed import for a person to see, and says nothing on X", async () => {
