@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { GameCard } from "@/components/GameCard";
 import { Player } from "@/components/Player";
 import { accounts, currentUser } from "@/lib/auth/current";
-import { COVER_FADE, GAME_FRAME_ALLOW, GAME_FRAME_SANDBOX, LINKED_FRAME_SANDBOX, playUrl } from "@/lib/frame";
+import { GAME_FRAME_ALLOW, GAME_FRAME_SANDBOX, LINKED_FRAME_SANDBOX, playUrl } from "@/lib/frame";
 import { activeVersion, isPlayable, SERVED_STATES } from "@/lib/games";
 import { canManage, MAX_DESCRIPTION, mayMove } from "@/lib/manage";
 import { openStores } from "@/lib/stores";
@@ -40,15 +41,23 @@ export default async function GamePage({ params, searchParams }: Props) {
 
   const creator = game.creatorId ? await (await accounts())?.byId(game.creatorId).catch(() => null) : null;
   const playable = isPlayable(game);
+  const others = (await openStores().repo.list()).filter((other) => other.slug !== game.slug && isPlayable(other)).slice(0, 8);
   const cover = game.cover ? `/media/${game.cover.hash}` : null;
 
   return (
     <>
+      <header className="page-head">
+        <p className="crumb">
+          <Link href="/">Store</Link>
+          <span aria-hidden="true">/</span>
+          {game.title}
+        </p>
+      </header>
       <section className="hero game-hero">
         <div
           className={cover ? "hero-art covered" : "hero-art"}
           aria-hidden="true"
-          style={cover ? { backgroundImage: `${COVER_FADE}, url(${cover})` } : undefined}
+          style={cover ? { backgroundImage: `url(${cover})` } : undefined}
         />
         <div className="hero-copy">
           {!playable && <p className="eyebrow">{game.state === "PAUSED" ? "Paused" : "Removed"}</p>}
@@ -155,6 +164,16 @@ export default async function GamePage({ params, searchParams }: Props) {
                 </ul>
               )
             )}
+          </section>
+        )}
+        {others.length > 0 && (
+          <section className="shelf">
+            <h2>More games</h2>
+            <div className="cards">
+              {others.map((other) => (
+                <GameCard key={other.slug} game={other} />
+              ))}
+            </div>
           </section>
         )}
       </div>
