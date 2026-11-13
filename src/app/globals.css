@@ -558,3 +558,249 @@ table.people button {
   font: inherit;
   font-weight: 700;
 }
+
+/* Game tiles: a 16:9 cover with the title under it. */
+.grid {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.tile {
+  display: grid;
+  gap: 4px;
+  text-decoration: none;
+}
+
+.tile .cover {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-bottom: 8px;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--line);
+  background: linear-gradient(135deg, var(--panel), var(--raised));
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.tile .cover.blank {
+  color: var(--ignition-soft);
+  font-weight: 800;
+  font-size: 56px;
+}
+
+.tile:hover .cover,
+.tile:focus-visible .cover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile .cover {
+    transition: none;
+  }
+  .tile:hover .cover,
+  .tile:focus-visible .cover {
+    transform: none;
+  }
+}
+
+.tile strong {
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.tile span:not(.cover) {
+  color: var(--mist);
+  font-size: 12px;
+}
+
+.byline {
+  margin: -8px 0 16px;
+  color: var(--mist);
+  font-weight: 700;
+}
+
+.byline a {
+  color: var(--paper);
+}
+
+.game-hero {
+  min-height: min(70vh, 640px);
+}
+
+.game-hero h1 {
+  max-width: 18ch;
+}
+
+.button.play {
+  gap: 10px;
+  min-width: 160px;
+  min-height: 56px;
+  font-size: 18px;
+}
+
+/* The screen a game plays on: it takes over the window. */
+.player {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  background: var(--void);
+}
+
+.player-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px 8px 16px;
+  background: var(--navy);
+  border-bottom: 1px solid var(--line);
+}
+
+.player-bar strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 800;
+}
+
+.player-bar button {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  color: var(--paper);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.player iframe {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: var(--void);
+}
+
+.manage form.submit {
+  max-width: 640px;
+}
+
+form.submit textarea {
+  min-height: 88px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--navy);
+  color: var(--paper);
+  font: inherit;
+  resize: vertical;
+}
+
+form.submit textarea:focus-visible {
+  outline: 3px solid var(--ignition);
+  outline-offset: 3px;
+}
+
+/* One glow per view: in the manage panel the Play button already has it. */
+.manage form.submit button {
+  box-shadow: none;
+}
+
+.manage-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  max-width: 640px;
+  margin: 24px 0 8px;
+  color: var(--mist);
+}
+
+.manage-row p {
+  flex: 1 1 280px;
+  margin: 0;
+}
+
+.manage-row form {
+  margin: 0;
+}
+
+.manage-row button.button {
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.modes legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.modes label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--navy);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.modes label:has(input:checked) {
+  border-color: var(--ignition);
+}
+
+.modes input {
+  min-height: 0;
+  padding: 0;
+  accent-color: var(--ignition);
+}
+
+h2 + table.people {
+  margin-bottom: 40px;
+}
+
+/* A game's cover is a full picture, so it gets more of the hero than the horizon does. */
+.hero-art.covered {
+  height: 84%;
+  background-position: center 28%;
+}
+
+.game-hero {
+  min-height: min(84vh, 820px);
+}
+
+button.button {
+  font: inherit;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+/* Keep the ground under a cover dark to the same depth as the cover's own fade, so no edge shows. */
+.hero:has(.hero-art.covered) {
+  background: linear-gradient(180deg, var(--void) 84%, var(--deck) 100%);
+}

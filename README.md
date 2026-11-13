@@ -59,6 +59,10 @@ During the pilot, adding games is by invitation. Admins come from `LT_ADMIN_HAND
 
 The bucket needs a CORS rule allowing `PUT` from the store's origin.
 
+A game can arrive four ways: a zip, a single HTML page, pasted code, or a link to where it is already hosted (the app copies its static files). Each game has a description and a cover image, shown on its page and on the store's front. Cover images are served from `/media/{hash}`, which answers only for real PNG, JPEG or WebP data, so game files in the same storage can never be reached from the store's own address.
+
+Creators can pause and restore their own games. Admins can also remove a game, at `/admin`. A paused or removed game stops being served at once.
+
 ### File storage
 
 Game files live in a private Cloudflare R2 bucket (`launchtitle-games`), keyed by the hash of their contents. The app also writes one small file per game, `live/{slug}.json`, saying which build is live.

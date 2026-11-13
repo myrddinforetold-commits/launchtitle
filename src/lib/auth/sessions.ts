@@ -48,6 +48,17 @@ export class Accounts {
     return rows[0] ? toUser(rows[0]) : null;
   }
 
+  /** Handles for a set of user ids, for crediting creators. */
+  async handles(ids: readonly string[]): Promise<Map<string, string>> {
+    const wanted = [...new Set(ids)].filter((id) => /^\d{1,18}$/.test(id));
+    if (wanted.length === 0) return new Map();
+    const rows = await this.sql.query<{ id: string | number; handle: string }>(
+      "SELECT id, handle FROM users WHERE id = ANY($1::bigint[])",
+      [wanted],
+    );
+    return new Map(rows.map((row) => [String(row.id), row.handle]));
+  }
+
   async list(limit = 200): Promise<User[]> {
     const rows = await this.sql.query<UserRow>(
       "SELECT id, x_account_id, handle, name, role FROM users ORDER BY created_at DESC, id DESC LIMIT $1",

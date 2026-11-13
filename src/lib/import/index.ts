@@ -54,6 +54,19 @@ export function importZip(deps: Deps, title: string, zip: Uint8Array, owner?: Ow
   return publish(deps, title, filesFromZip(zip), { kind: "zip" }, [], owner);
 }
 
+/** A game that is a single page of HTML, such as one written in a chat with an assistant. */
+const MAX_HTML_BYTES = 20 * 1024 * 1024;
+
+export async function importHtml(deps: Deps, title: string, html: Uint8Array, owner?: Owner): Promise<Game> {
+  if (html.byteLength === 0) throw new ImportError("empty", "That file is empty.");
+  if (html.byteLength > MAX_HTML_BYTES) throw new ImportError("too_large", "A single page can be up to 20 MB.");
+  const start = new TextDecoder().decode(html.subarray(0, 2048)).toLowerCase();
+  if (!/<(!doctype|html|head|body|script|canvas|div|style|meta)\b/.test(start)) {
+    throw new ImportError("no_index", "That does not look like an HTML page.");
+  }
+  return publish(deps, title, [["index.html", html]], { kind: "html" }, [], owner);
+}
+
 /** Import a game by copying its static files from a public URL. */
 export async function importUrl(
   deps: Deps,

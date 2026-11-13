@@ -27,7 +27,7 @@ export type Version = {
   manifest: Manifest;
   totalBytes: number;
   createdAt: string;
-  source: { kind: "zip" } | { kind: "crawl"; url: string };
+  source: { kind: "zip" } | { kind: "html" } | { kind: "crawl"; url: string };
   /** Other sites the game's files refer to. Logged for review, not blocked. */
   externalDomains: string[];
 };
@@ -41,6 +41,10 @@ export type Game = {
   createdAt: string;
   /** The signed-in person who added the game. Absent for games added before sign-in existed. */
   creatorId?: string;
+  /** A sentence or two for the game's page. */
+  description?: string;
+  /** The cover image: its key in file storage and its type. */
+  cover?: { hash: string; type: string };
 };
 
 export interface GameRepo {

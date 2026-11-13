@@ -1,6 +1,8 @@
 import Link from "next/link";
 
-import { SERVED_STATES } from "@/lib/games";
+import { accounts } from "@/lib/auth/current";
+import { COVER_FADE } from "@/lib/frame";
+import { SERVED_STATES, type Game } from "@/lib/games";
 import { openStores } from "@/lib/stores";
 
 export const dynamic = "force-dynamic";
@@ -37,41 +39,83 @@ const SIGNIN_NOTES: Record<string, string> = {
   unavailable: "Sign-in is not available right now.",
 };
 
+
+function Cover({ game }: { game: Game }) {
+  return game.cover ? (
+    // eslint-disable-next-line @next/next/no-img-element -- served from our own storage, already sized by the creator
+    <img className="cover" src={`/media/${game.cover.hash}`} alt="" loading="lazy" />
+  ) : (
+    <span className="cover blank" aria-hidden="true">
+      {game.title.slice(0, 1).toUpperCase()}
+    </span>
+  );
+}
+
 export default async function Home({ searchParams }: { searchParams: Promise<{ signin?: string }> }) {
   const note = SIGNIN_NOTES[(await searchParams).signin ?? ""];
   const games = (await openStores().repo.list()).filter((game) => SERVED_STATES.has(game.state));
   const open = games.length > 0;
+  // The newest game with a cover leads the store. Without one, the horizon does.
+  const featured = games.find((game) => game.cover) ?? null;
+  const handles =
+    (await (await accounts())
+      ?.handles(games.flatMap((game) => (game.creatorId ? [game.creatorId] : [])))
+      .catch(() => null)) ?? new Map<string, string>();
+  const by = (game: Game) => (game.creatorId ? handles.get(game.creatorId) : undefined);
 
   return (
     <>
       <section className="hero">
-        <div className="hero-art" aria-hidden="true" />
+        <div
+          className={featured?.cover ? "hero-art covered" : "hero-art"}
+          aria-hidden="true"
+          style={featured?.cover ? { backgroundImage: `${COVER_FADE}, url(/media/${featured.cover.hash})` } : undefined}
+        />
         <div className="hero-copy">
           {note && (
             <p className="notice error" role="status">
               {note}
             </p>
           )}
-          <p className="eyebrow">{open ? "Now playing" : "Opening soon"}</p>
-          <h1>Every game deserves a launch.</h1>
-          <p className="hero-lede">
-            More games are being made than ever, and most are never found. Launch Title is a store for new web games:
-            a place to play them, and a way for the good ones to get seen.
-          </p>
-          <div className="actions">
-            {open ? (
-              <a className="button primary" href="#games">
-                Browse games
-              </a>
-            ) : (
-              <a className="button primary" href={X_URL} rel="noopener">
-                Follow @launchtitlegg
-              </a>
-            )}
-            <a className="button" href="#how">
-              How it works
-            </a>
-          </div>
+          {featured ? (
+            <>
+              <p className="eyebrow">Now playing</p>
+              <h1>{featured.title}</h1>
+              {by(featured) && <p className="byline">By @{by(featured)}</p>}
+              {featured.description && <p className="hero-lede">{featured.description}</p>}
+              <div className="actions">
+                <Link className="button primary" href={`/games/${featured.slug}`}>
+                  Play
+                </Link>
+                <a className="button" href="#games">
+                  All games
+                </a>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="eyebrow">{open ? "Now playing" : "Opening soon"}</p>
+              <h1>Every game deserves a launch.</h1>
+              <p className="hero-lede">
+                More games are being made than ever, and most are never found. Launch Title is a store for new web
+                games: a place to play them, and a way for the good ones to get seen.
+              </p>
+              <div className="actions">
+                {open ? (
+                  <a className="button primary" href="#games">
+                    Browse games
+                  </a>
+                ) : (
+                  <a className="button primary" href={X_URL} rel="noopener">
+                    Follow @launchtitlegg
+                  </a>
+                )}
+                <a className="button" href="#how">
+                  How it works
+                </a>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -82,9 +126,10 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
             <ul className="grid">
               {games.map((game) => (
                 <li key={game.slug}>
-                  <Link className="card" href={`/games/${game.slug}`}>
+                  <Link className="tile" href={`/games/${game.slug}`}>
+                    <Cover game={game} />
                     <strong>{game.title}</strong>
-                    <span>Play now</span>
+                    {by(game) && <span>@{by(game)}</span>}
                   </Link>
                 </li>
               ))}
@@ -93,7 +138,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
         )}
 
         <section id="how" className="band">
-          <h2>How it {open ? "works" : "will work"}</h2>
+          <h2>{featured ? "Every game deserves a launch" : open ? "How it works" : "How it will work"}</h2>
           <ol className="steps">
             {STEPS.map((step) => (
               <li key={step.n}>
