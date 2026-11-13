@@ -11,8 +11,3 @@ routes = [{ pattern = "*.launchtitle.games/*", zone_name = "launchtitle.games" }
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "launchtitle-games"
-
-[vars]
-PLAY_HOST = "launchtitle.games"
-# The only sites allowed to show a game in a frame.
-FRAME_ANCESTORS = "https://launchtitle.gg https://www.launchtitle.gg https://launchtitle.vercel.app"

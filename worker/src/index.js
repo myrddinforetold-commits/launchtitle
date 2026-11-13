@@ -11,15 +11,16 @@ const SERVED = new Set(["HOSTED", "CLAIMED", "PAYABLE"]);
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{1,38}[a-z0-9])$/;
 const HASH = /^[0-9a-f]{64}$/;
 
-/**
- * @param {Request} request
- * @param {{ BUCKET: any, PLAY_HOST: string, FRAME_ANCESTORS: string }} env
- * @returns {Promise<Response>}
- */
+// Defaults, so the program needs no settings beyond its bucket. Both can be overridden.
+const PLAY_HOST = "launchtitle.games";
+// The only sites allowed to show a game in a frame.
+const FRAME_ANCESTORS = "https://launchtitle.gg https://www.launchtitle.gg https://launchtitle.vercel.app";
+
+// request: a Request. env: { BUCKET, PLAY_HOST?, FRAME_ANCESTORS? }, where BUCKET is the R2 bucket.
 export async function handle(request, env) {
   const base = {
     // Only the store may put a game in a frame.
-    "content-security-policy": `frame-ancestors ${env.FRAME_ANCESTORS}`,
+    "content-security-policy": `frame-ancestors ${env.FRAME_ANCESTORS || FRAME_ANCESTORS}`,
     "x-content-type-options": "nosniff",
     "referrer-policy": "no-referrer",
     "cross-origin-resource-policy": "same-origin",
@@ -34,7 +35,7 @@ export async function handle(request, env) {
   if (request.method !== "GET" && !head) return text(405, "Method not allowed", { allow: "GET, HEAD" });
 
   const url = new URL(request.url);
-  const suffix = `.${env.PLAY_HOST.toLowerCase()}`;
+  const suffix = `.${(env.PLAY_HOST || PLAY_HOST).toLowerCase()}`;
   const host = url.hostname.toLowerCase();
   if (!host.endsWith(suffix)) return text(404, "Not found");
   const slug = host.slice(0, -suffix.length);
