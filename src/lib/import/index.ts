@@ -1,12 +1,13 @@
 import { ImportError, prepareFiles } from "../files";
 import { addVersion, buildVersion, isValidSlug, slugify, type Game, type GameRepo, type Version } from "../games";
+import type { LiveIndex } from "../live";
 import type { BlobStore } from "../storage";
 import { crawlSite, type CrawlOptions } from "./crawl";
 import { filesFromZip } from "./zip";
 
 export { ImportError };
 
-type Deps = { repo: GameRepo; store: BlobStore };
+type Deps = { repo: GameRepo; store: BlobStore; live?: LiveIndex };
 
 async function publish(
   deps: Deps,
@@ -33,6 +34,8 @@ async function publish(
   };
   const updated = addVersion(game, version);
   await deps.repo.save(updated);
+  // Last, so the play domain only ever points at a build that is fully stored and recorded.
+  await deps.live?.publish(updated);
   return updated;
 }
 
