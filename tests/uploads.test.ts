@@ -57,8 +57,8 @@ describe("R2 upload store", () => {
 
   it("refuses a zip over the limit before downloading it, and reports a missing one", async () => {
     const calls: string[] = [];
-    const big = async (request: Request) => {
-      calls.push(request.method);
+    const big = async (_url: string, init: RequestInit) => {
+      calls.push(String(init.method));
       return new Response(null, { status: 200, headers: { "content-length": "999" } });
     };
     const id = randomToken();

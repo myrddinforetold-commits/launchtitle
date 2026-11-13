@@ -11,7 +11,7 @@ export type R2Options = {
   accessKeyId: string;
   secretAccessKey: string;
   /** Replaced in tests. */
-  fetch?: (request: Request) => Promise<Response>;
+  fetch?: (url: string, init: RequestInit) => Promise<Response>;
 };
 
 const HASH = /^[0-9a-f]{64}$/;
@@ -20,7 +20,7 @@ const HASH = /^[0-9a-f]{64}$/;
 class R2Bucket {
   private readonly client: AwsClient;
   private readonly base: string;
-  private readonly send: (request: Request) => Promise<Response>;
+  private readonly send: (url: string, init: RequestInit) => Promise<Response>;
 
   constructor(options: R2Options) {
     this.client = new AwsClient({
@@ -30,7 +30,7 @@ class R2Bucket {
       region: "auto",
     });
     this.base = `https://${options.accountId}.r2.cloudflarestorage.com/${options.bucket}`;
-    this.send = options.fetch ?? ((request) => fetch(request));
+    this.send = options.fetch ?? ((url, init) => fetch(url, init));
   }
 
   async request(method: string, key: string, body?: Uint8Array, type = "application/octet-stream"): Promise<Response> {
@@ -39,7 +39,10 @@ class R2Bucket {
       body: body as BodyInit | undefined,
       headers: body ? { "content-type": type } : undefined,
     });
-    return this.send(signed);
+    // Send the address, headers and bytes separately, never the signed Request object itself.
+    // Handed a Request, the runtime streams the body without saying how long it is, and
+    // file storage refuses anything but the smallest files that way (411 Length Required).
+    return this.send(signed.url, { method, headers: signed.headers, body: body as BodyInit | undefined });
   }
 
   /** A link that lets a browser upload one file to this key, and nothing else, for a short time. */
