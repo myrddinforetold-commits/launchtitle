@@ -32,7 +32,8 @@ npm run lint
 | Setting | Default | What it does |
 | --- | --- | --- |
 | `DATABASE_URL` | unset | Postgres connection string. Unset, game records go to a JSON file in `LT_DATA_DIR` |
-| `LT_DATA_DIR` | `./.data` | Where game files are kept, and game records when there is no database |
+| `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | unset | Cloudflare R2 bucket for game files. Unless all four are set, files go to `LT_DATA_DIR` |
+| `LT_DATA_DIR` | `./.data` | Local fallback for game files and game records |
 | `LT_PLAY_HOST` | `play.localhost:4001` | Host that serves games, at `{slug}.<host>` |
 | `LT_PLAY_SCHEME` | `http` | `https` in production |
 | `LT_APP_ORIGIN` | `http://localhost:3000` | The only origin allowed to frame a game |
@@ -46,10 +47,14 @@ Preview deployments share the production database for now, so preview builds do 
 
 Tests run against a real Postgres inside the test process, so they need no database.
 
+### File storage
+
+Game files live in a private Cloudflare R2 bucket (`launchtitle-games`), keyed by the hash of their contents. `GET /api/health` reports whether the deployment can reach its database and its bucket.
+
 ### What milestone 1 still needs
 
-- Object storage in place of local files, behind the `BlobStore` interface. Until then the deployed app can list games but cannot store one.
-- The play server deployed on `launchtitle.games`.
+- The play server deployed on `launchtitle.games`, reading the same bucket.
+- Imports that fit a hosted deployment: uploads go straight to the bucket, since a request to the app is capped at a few megabytes.
 - The scan, boot test and screenshot steps of the import pipeline.
 - A browser test proving a game frame cannot read the app's cookies or storage. Today's tests prove the server side of that: separate origins, no cookies, framing limited to the app.
 - Pinning the resolved IP address when crawling a URL. Today the private-address check looks at the host name only.
