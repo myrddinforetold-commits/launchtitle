@@ -138,7 +138,7 @@ A creator re-runs `add` or pushes to the connected repo to publish a new version
 The shell is what makes this a place to play and not a list of links. Everything in it works without the game's cooperation.
 
 - **Installable app.** A web app that installs and launches full-screen with no browser bar. A desktop wrapper comes later.
-- **Three screens.** Store, Library, Profile.
+- **Three sections.** Store, Library, Creators. Each has its own colour (see `brand/brand-book.md`).
 - **System layer.** The shell draws the boot animation, the loading screen and the pause overlay outside the game frame. The overlay holds resume, restart, tip the creator, report and exit.
 - **Controller support.** The whole shell is navigable with a gamepad, with a visible focus ring and a large-screen layout.
 - **Input badges.** Each game page shows keyboard and mouse, touch, or controller. The boot test detects them and the creator can override.
@@ -157,12 +157,12 @@ The shell sends a heartbeat every 15 seconds while three things are true: the ga
 
 ## Curation
 
-There are two tiers, and moving from one to the other is a human decision.
+There are two tiers, and moving from one to the other is a human decision. A curated store game is called a Launch Title.
 
-| | Open shelf | Store |
+| | Open shelf | Launch Titles (the store) |
 | --- | --- | --- |
 | Entry | Automatic: Tier 2 and a passed boot test | Hand-picked by a curator |
-| Where it shows | Search, creator pages, direct links | The console home screen and the weekly drop |
+| Where it shows | Search, creator pages, direct links | The console home screen and Launch Day |
 | Earns from the pool | Yes | Yes |
 
 **Store criteria**
@@ -176,9 +176,9 @@ There are two tiers, and moving from one to the other is a human decision.
 
 The queue ranks shelf games by median session length, next-day return rate, share of players who pass 5 minutes, and report rate. The ranking only orders the queue. A person decides.
 
-**Weekly drop**
+**Launch Day**
 
-A fixed number of new store games each week, announced by the bot on X. The number is an open question.
+A fixed number of new Launch Titles each week, announced by the bot on X. Each one gets a permanent number (No. 001, No. 002 and so on). How many per week is an open question.
 
 **Demotion**
 
@@ -223,6 +223,7 @@ Creators are paid from a weekly pool, split by qualified playtime. Creators keep
 - Paid weekly, with a minimum of $10.
 - Payout rails sit behind one `PayoutProvider` interface. Version 1 implements one rail; which one is an open question.
 - The bot posts each payout publicly. A creator can hide the amount.
+- In the product, creators see payouts as "royalties".
 
 **Ledger**
 
@@ -279,7 +280,7 @@ Seven milestones, each with a check that must pass before the next one starts. M
    - Check: count how many creators say yes, and how many of the games import by URL alone.
 2. **M1: Hosting core.** Import by URL and by zip, isolated subdomains, versions, a basic game page.
    - Check: 10 pilot games play on a phone and a laptop. A test proves a game frame cannot read app cookies or storage.
-3. **M2: Console shell.** Installable app, Store, Library, Profile, pause overlay, controller navigation, heartbeat.
+3. **M2: Console shell.** Installable app, Store, Library, Creators, pause overlay, controller navigation, heartbeat. Built to `brand/tokens.json` and the screens in `design/screens/`.
    - Check: the app installs on desktop and Android. Every screen is reachable with a controller alone. Heartbeat totals match a scripted session within 5%.
 4. **M3: X bot and web submit.** All five commands, the confirm flow, limits, opt-outs.
    - Check: every command works end to end on a test account. Tests cover duplicates, expiry, opt-out and a wrong-account `yes`.
@@ -287,8 +288,8 @@ Seven milestones, each with a check that must pass before the next one starts. M
    - Check: an unclaimed game pauses on day 8 and resumes on claim. A different X account cannot claim it.
 6. **M5: Pool, ledger and payouts.** Weekly pool job, ledger, one payout rail, public payout posts.
    - Check: a pool run can be reproduced from stored playtime. A farming test account earns nothing.
-7. **M6: Curation tools.** Curator queue, promote and demote, the weekly drop page.
-   - Check: a curator can run a full weekly drop without touching the database.
+7. **M6: Curation tools.** Curator queue, promote and demote, the Launch Day page.
+   - Check: a curator can run a full Launch Day without touching the database.
 
 **After version 1:** tips, publish-from-agent command and connector, a save and leaderboard script, metered AI inference, player subscription, ads.
 
@@ -315,7 +316,7 @@ These must exist before the first imported copy goes live, and the payout items 
 - [ ] Size of the weekly pool in phase 1.
 - [ ] Per-game cap on one week's pool (placeholder 15%).
 - [ ] Lapse period for unclaimed credit (placeholder 90 days).
-- [ ] Number of games in each weekly drop, and who curates.
+- [ ] Number of games in each Launch Day, and who curates.
 
 **Facts not yet verified**
 
