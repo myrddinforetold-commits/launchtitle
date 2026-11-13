@@ -39,6 +39,8 @@ export type Game = {
   versions: Version[];
   activeVersionId: string | null;
   createdAt: string;
+  /** The signed-in person who added the game. Absent for games added before sign-in existed. */
+  creatorId?: string;
 };
 
 export interface GameRepo {
@@ -77,10 +79,17 @@ export async function buildVersion(
 ): Promise<Version> {
   const manifest: Manifest = {};
   let totalBytes = 0;
-  for (const name of [...files.keys()].sort()) {
-    const bytes = files.get(name)!;
-    manifest[name] = { hash: await store.put(bytes), size: bytes.byteLength, type: contentType(name) };
-    totalBytes += bytes.byteLength;
+  const names = [...files.keys()].sort();
+  // A few at a time: fast enough for a game of 2,000 files, gentle on file storage.
+  const UPLOADS_AT_ONCE = 8;
+  for (let i = 0; i < names.length; i += UPLOADS_AT_ONCE) {
+    const batch = names.slice(i, i + UPLOADS_AT_ONCE);
+    const hashes = await Promise.all(batch.map((name) => store.put(files.get(name)!)));
+    batch.forEach((name, j) => {
+      const bytes = files.get(name)!;
+      manifest[name] = { hash: hashes[j], size: bytes.byteLength, type: contentType(name) };
+      totalBytes += bytes.byteLength;
+    });
   }
   const id = sha256(JSON.stringify(Object.entries(manifest).map(([name, e]) => [name, e.hash]))).slice(0, 16);
   return {

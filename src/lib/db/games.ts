@@ -7,11 +7,12 @@ type Row = {
   state: GameState;
   active_version: string | null;
   created_at: Date | string;
+  creator_user_id: string | number | null;
   versions: Version[];
 };
 
 const SELECT_GAME = `
-  SELECT g.slug, g.title, g.state, g.active_version, g.created_at,
+  SELECT g.slug, g.title, g.state, g.active_version, g.created_at, g.creator_user_id,
     COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
         'id', v.version,
@@ -35,6 +36,7 @@ function toGame(row: Row): Game {
     activeVersionId: row.active_version,
     createdAt: iso(row.created_at),
     versions: row.versions.map((v) => ({ ...v, totalBytes: Number(v.totalBytes), createdAt: iso(v.createdAt) })),
+    ...(row.creator_user_id === null ? {} : { creatorId: String(row.creator_user_id) }),
   };
 }
 
@@ -61,10 +63,12 @@ export class PgGameRepo implements GameRepo {
     }
     await this.sql.query(
       `WITH g AS (
-         INSERT INTO games (slug, title, state, active_version, created_at)
-         VALUES ($1, $2, $3, $4, $5)
+         INSERT INTO games (slug, title, state, active_version, created_at, creator_user_id)
+         VALUES ($1, $2, $3, $4, $5, $7)
          ON CONFLICT (slug) DO UPDATE
-           SET title = EXCLUDED.title, state = EXCLUDED.state, active_version = EXCLUDED.active_version
+           SET title = EXCLUDED.title, state = EXCLUDED.state, active_version = EXCLUDED.active_version,
+               -- A game's creator is set once and never reassigned by a save.
+               creator_user_id = COALESCE(games.creator_user_id, EXCLUDED.creator_user_id)
          RETURNING id
        ), v AS (
          INSERT INTO versions (game_id, version, manifest, total_bytes, source, external_domains, created_at)
@@ -76,7 +80,15 @@ export class PgGameRepo implements GameRepo {
          RETURNING 1
        )
        SELECT (SELECT count(*) FROM v) AS added`,
-      [game.slug, game.title, game.state, game.activeVersionId, game.createdAt, JSON.stringify(game.versions)],
+      [
+        game.slug,
+        game.title,
+        game.state,
+        game.activeVersionId,
+        game.createdAt,
+        JSON.stringify(game.versions),
+        game.creatorId ?? null,
+      ],
     );
   }
 }

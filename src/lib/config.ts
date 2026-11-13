@@ -12,6 +12,11 @@ export function getConfig() {
     /** The X app used for sign-in. Without both, sign-in is switched off. */
     xClientId: process.env.X_CLIENT_ID?.trim() || undefined,
     xClientSecret: process.env.X_CLIENT_SECRET?.trim() || undefined,
+    /** X handles that become admins when they sign in. How the first admin exists at all. */
+    adminHandles: (process.env.LT_ADMIN_HANDLES ?? "")
+      .split(",")
+      .map((h) => h.trim().replace(/^@/, "").toLowerCase())
+      .filter(Boolean),
     /**
      * Host that serves game files. Each game lives at `{slug}.{playHost}`.
      * In production this must be a different registrable domain from the app,
