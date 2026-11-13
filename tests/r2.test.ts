@@ -8,7 +8,8 @@ import { sha256 } from "@/lib/storage";
 function fakeR2() {
   const objects = new Map<string, Uint8Array>();
   const calls: { method: string; url: string; auth: string | null }[] = [];
-  const fetch = async (request: Request) => {
+  const fetch = async (url: string, init: RequestInit) => {
+    const request = new Request(url, init);
     calls.push({ method: request.method, url: request.url, auth: request.headers.get("authorization") });
     const key = new URL(request.url).pathname;
     if (request.method === "PUT") {
@@ -45,6 +46,23 @@ describe("R2 file storage", () => {
       expect(call.auth).toMatch(/^AWS4-HMAC-SHA256 Credential=id\/\d{8}\/auto\/s3\/aws4_request/);
       expect(call.auth).not.toContain("secret");
     }
+  });
+
+  it("sends a file as plain bytes, so its length goes with it", async () => {
+    const bodies: unknown[] = [];
+    const store = new R2BlobStore({
+      ...options,
+      fetch: async (url, init) => {
+        expect(typeof url).toBe("string");
+        if (init.method === "PUT") bodies.push(init.body);
+        return new Response(null, { status: init.method === "HEAD" ? 404 : 200 });
+      },
+    });
+    const large = new Uint8Array(600_000).fill(7);
+    await store.put(large);
+    // The very same bytes, not a stream wrapped around them.
+    expect(bodies).toEqual([large]);
+    expect(bodies[0]).toBeInstanceOf(Uint8Array);
   });
 
   it("does not upload a file it already has", async () => {

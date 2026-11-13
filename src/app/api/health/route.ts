@@ -8,6 +8,9 @@ export const dynamic = "force-dynamic";
 
 const PROBE_PAGE = "<!doctype html><title>Launch Title</title><p>Launch Title play domain: OK</p>\n";
 
+/** Half a megabyte of fixed bytes. Stored once, since files are keyed by their contents. */
+const LARGE_PROBE = new Uint8Array(512 * 1024).map((_, i) => (i * 31 + 7) & 0xff);
+
 async function check(name: string, run: () => Promise<void>): Promise<boolean> {
   try {
     await run();
@@ -35,9 +38,11 @@ export async function GET() {
   });
 
   const storage = await check("storage", async () => {
-    const hash = await store.put(page);
-    const back = await store.get(hash);
-    if (!back || back.byteLength !== page.byteLength) throw new Error("read back a different file");
+    // A real-sized file as well as a tiny one: file storage treats them differently.
+    for (const bytes of [page, LARGE_PROBE]) {
+      const back = await store.get(await store.put(bytes));
+      if (!back || back.byteLength !== bytes.byteLength) throw new Error("read back a different file");
+    }
   });
 
   const play = await check("play", async () => {
@@ -57,11 +62,11 @@ export async function GET() {
     uploads === null ||
     (await check("uploads", async () => {
       const id = randomToken();
-      const sent = await fetch(await uploads.begin("health", id), { method: "PUT", body: page });
+      const sent = await fetch(await uploads.begin("health", id), { method: "PUT", body: LARGE_PROBE });
       if (!sent.ok) throw new Error(`upload address answered ${sent.status}`);
-      const back = await uploads.read("health", id, 1024);
+      const back = await uploads.read("health", id, LARGE_PROBE.byteLength);
       await uploads.remove("health", id);
-      if (!(back instanceof Uint8Array) || back.byteLength !== page.byteLength) throw new Error("read back a different upload");
+      if (!(back instanceof Uint8Array) || back.byteLength !== LARGE_PROBE.byteLength) throw new Error("read back a different upload");
     }));
 
   const body = {
