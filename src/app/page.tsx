@@ -5,31 +5,106 @@ import { openStores } from "@/lib/stores";
 
 export const dynamic = "force-dynamic";
 
+const X_URL = "https://x.com/launchtitlegg";
+
+const STEPS = [
+  {
+    n: "01",
+    title: "Tag it",
+    body: "Reply to a game on X and tag us. The creator confirms from their own account, and nothing goes up without them.",
+  },
+  {
+    n: "02",
+    title: "We host it",
+    body: "The game gets its own address and plays right here, full screen, on a phone or a desk. No downloads.",
+  },
+  {
+    n: "03",
+    title: "It gets a launch",
+    body: "Every week we pick the best new games as Launch Titles and put them at the front of the store.",
+  },
+  {
+    n: "04",
+    title: "Creators get paid",
+    body: "When a game earns, 80% goes to the person who made it.",
+  },
+];
+
 export default async function Home() {
   const games = (await openStores().repo.list()).filter((game) => SERVED_STATES.has(game.state));
+  const open = games.length > 0;
 
   return (
     <>
-      <h1>Games</h1>
-      <p className="lede">Every game hosted so far.</p>
-      {games.length === 0 ? (
-        <p className="empty">
-          No games yet. <Link href="/submit">Submit the first one.</Link>
-        </p>
-      ) : (
-        <ul className="grid">
-          {games.map((game) => (
-            <li key={game.slug}>
-              <Link className="card" href={`/games/${game.slug}`}>
-                <strong>{game.title}</strong>
-                <span>
-                  {game.versions.length} {game.versions.length === 1 ? "version" : "versions"}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      <section className="hero">
+        <div className="hero-art" aria-hidden="true" />
+        <div className="hero-copy">
+          <p className="eyebrow">{open ? "Now playing" : "Opening soon"}</p>
+          <h1>Every game deserves a launch.</h1>
+          <p className="hero-lede">
+            More games are being made than ever, and most are never found. Launch Title is a store for new web games:
+            a place to play them, and a way for the good ones to get seen.
+          </p>
+          <div className="actions">
+            {open ? (
+              <a className="button primary" href="#games">
+                Browse games
+              </a>
+            ) : (
+              <a className="button primary" href={X_URL} rel="noopener">
+                Follow @launchtitlegg
+              </a>
+            )}
+            <a className="button" href="#how">
+              How it works
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <div className="deck">
+        {open && (
+          <section id="games" className="band">
+            <h2>Games</h2>
+            <ul className="grid">
+              {games.map((game) => (
+                <li key={game.slug}>
+                  <Link className="card" href={`/games/${game.slug}`}>
+                    <strong>{game.title}</strong>
+                    <span>Play now</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        <section id="how" className="band">
+          <h2>How it {open ? "works" : "will work"}</h2>
+          <ol className="steps">
+            {STEPS.map((step) => (
+              <li key={step.n}>
+                <span className="step-n">{step.n}</span>
+                <h3>{step.title}</h3>
+                <p>{step.body}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section className="band creators">
+          <div>
+            <h2>Made a game?</h2>
+            <p>
+              We are choosing the first Launch Titles now. If you have a game that runs in a browser, send it to us on X
+              and we will take a look.
+            </p>
+          </div>
+          <a className="button primary" href={X_URL} rel="noopener">
+            Send us your game
+          </a>
+        </section>
+      </div>
     </>
   );
 }

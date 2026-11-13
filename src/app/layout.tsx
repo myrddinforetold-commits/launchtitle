@@ -1,14 +1,24 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+
+import { getConfig } from "@/lib/config";
 
 import "./globals.css";
 
+const X_URL = "https://x.com/launchtitlegg";
+
 export const metadata: Metadata = {
-  title: "Launch Title",
-  description: "Every game deserves a launch.",
+  metadataBase: new URL("https://launchtitle.gg"),
+  title: { default: "Launch Title", template: "%s · Launch Title" },
+  description: "A curated store for new web games. Every game deserves a launch.",
+  openGraph: { siteName: "Launch Title", type: "website" },
+  twitter: { card: "summary_large_image", site: "@launchtitlegg" },
 };
 
+export const viewport: Viewport = { themeColor: "#070b14" };
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const { openImport } = getConfig();
   return (
     <html lang="en">
       <head>
@@ -28,10 +38,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <span>LAUNCH TITLE</span>
           </Link>
           <nav>
-            <Link href="/submit">Submit a game</Link>
+            {openImport && <Link href="/submit">Submit a game</Link>}
+            <a href={X_URL} rel="noopener">
+              Follow on X
+            </a>
           </nav>
         </header>
         <main>{children}</main>
+        <footer className="foot">
+          <span>Launch Title</span>
+          <a href={X_URL} rel="noopener">
+            @launchtitlegg
+          </a>
+        </footer>
       </body>
     </html>
   );
