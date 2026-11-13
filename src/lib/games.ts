@@ -49,6 +49,12 @@ export type Game = {
   display?: "portrait";
   /** Set when the game plays from its creator's own site instead of from our copy. */
   externalUrl?: string;
+  /** Pictures of the game being played, in the order they are shown. */
+  screenshots?: { hash: string; type: string }[];
+  /** The controls and the aim, in the creator's words. */
+  howTo?: string;
+  /** What the game is made for. Absent when it plays well on both. */
+  devices?: "phone" | "desktop";
 };
 
 /** A game can be played if it has a build of ours to serve, or a site of its own to play from. */

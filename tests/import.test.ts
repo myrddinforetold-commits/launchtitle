@@ -173,3 +173,13 @@ describe("crawl import", () => {
     expect(game.versions[0].externalDomains).toEqual(["cdn.other.example"]);
   });
 });
+
+describe("the downloadable skill", () => {
+  it("is the same skill as the one in the repository, in a folder named after it", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const { filesFromZip } = await import("@/lib/import/zip");
+    const files = filesFromZip(new Uint8Array(await readFile("public/launch-title-game.zip")));
+    expect(files.map(([name]) => name)).toEqual(["launch-title-game/SKILL.md"]);
+    expect(new TextDecoder().decode(files[0][1])).toBe(await readFile("skills/launch-title-game/SKILL.md", "utf8"));
+  });
+});

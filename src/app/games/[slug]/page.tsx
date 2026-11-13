@@ -7,7 +7,7 @@ import { Player } from "@/components/Player";
 import { accounts, currentUser, plays, xApp } from "@/lib/auth/current";
 import { GAME_FRAME_ALLOW, GAME_FRAME_SANDBOX, LINKED_FRAME_SANDBOX, playUrl } from "@/lib/frame";
 import { activeVersion, isPlayable, SERVED_STATES } from "@/lib/games";
-import { canManage, MAX_DESCRIPTION, mayMove } from "@/lib/manage";
+import { canManage, MAX_DESCRIPTION, MAX_HOW_TO, MAX_SCREENSHOTS, mayMove } from "@/lib/manage";
 import { playsLabel } from "@/lib/plays";
 import { openStores } from "@/lib/stores";
 
@@ -42,7 +42,12 @@ export default async function GamePage({ params, searchParams }: Props) {
 
   const creator = game.creatorId ? await (await accounts())?.byId(game.creatorId).catch(() => null) : null;
   const playable = isPlayable(game);
-  const others = (await openStores().repo.list()).filter((other) => other.slug !== game.slug && isPlayable(other)).slice(0, 8);
+  const rest = (await openStores().repo.list()).filter((other) => other.slug !== game.slug && isPlayable(other));
+  const fromCreator = game.creatorId ? rest.filter((other) => other.creatorId === game.creatorId).slice(0, 8) : [];
+  const others = rest.filter((other) => !fromCreator.includes(other)).slice(0, 8);
+  const shots = game.screenshots ?? [];
+  const added = new Date(game.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const madeFor = game.devices === "phone" ? "Best on a phone" : game.devices === "desktop" ? "Best on a desktop" : "Phone and desktop";
   const cover = game.cover ? `/media/${game.cover.hash}` : null;
   const store = await plays().catch(() => null);
   const stats = (await store?.stats().catch(() => null))?.get(game.slug);
@@ -70,9 +75,7 @@ export default async function GamePage({ params, searchParams }: Props) {
           {creator && (
             <p className="byline">
               By{" "}
-              <a href={`https://x.com/${creator.handle}`} rel="noopener">
-                @{creator.handle}
-              </a>
+              <Link href={`/creators/${creator.handle}`}>@{creator.handle}</Link>
             </p>
           )}
           {game.description && <p className="hero-lede">{game.description}</p>}
@@ -120,8 +123,58 @@ export default async function GamePage({ params, searchParams }: Props) {
       </section>
 
       <div className="deck">
+        <section className={shots.length > 0 || game.howTo ? "about" : "about solo"}>
+          {(shots.length > 0 || game.howTo) && (
+            <div className="about-main">
+              {shots.length > 0 && (
+                <div className="shots" role="list" aria-label="Screenshots">
+                  {shots.map((shot, i) => (
+                    <a key={shot.hash} role="listitem" href={`/media/${shot.hash}`} target="_blank" rel="noopener" aria-label={`Screenshot ${i + 1}, full size`}>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- served from our own storage */}
+                      <img src={`/media/${shot.hash}`} alt="" loading="lazy" />
+                    </a>
+                  ))}
+                </div>
+              )}
+              {game.howTo && (
+                <div className="panel">
+                  <h2>How to play</h2>
+                  <p className="prose">{game.howTo}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <aside className="panel info">
+            <dl>
+              <div>
+                <dt>Plays on</dt>
+                <dd>{madeFor}</dd>
+              </div>
+              <div>
+                <dt>Added</dt>
+                <dd>{added}</dd>
+              </div>
+              <div>
+                <dt>Price</dt>
+                <dd>Free to play</dd>
+              </div>
+            </dl>
+            {creator && (
+              <Link className="maker" href={`/creators/${creator.handle}`}>
+                <span className="maker-mark" aria-hidden="true">
+                  {creator.handle.slice(0, 1).toUpperCase()}
+                </span>
+                <span>
+                  <small>Made by</small>
+                  <b>@{creator.handle}</b>
+                </span>
+              </Link>
+            )}
+          </aside>
+        </section>
+
         {manages && user && (
-          <section className="band manage">
+          <section className="band manage" id="manage">
             <h2>Manage this game</h2>
             {note && (
               <p className="notice" role="status">
@@ -133,6 +186,20 @@ export default async function GamePage({ params, searchParams }: Props) {
                 Description
                 <small>A sentence or two. Up to {MAX_DESCRIPTION} characters.</small>
                 <textarea name="description" rows={3} maxLength={MAX_DESCRIPTION} defaultValue={game.description ?? ""} />
+              </label>
+              <label>
+                How to play
+                <small>The controls and the aim. Up to {MAX_HOW_TO} characters.</small>
+                <textarea name="howTo" rows={3} maxLength={MAX_HOW_TO} defaultValue={game.howTo ?? ""} />
+              </label>
+              <label>
+                Made for
+                <small>Shown on the page, so players know what to expect.</small>
+                <select name="devices" defaultValue={game.devices ?? "any"}>
+                  <option value="any">Phone and desktop</option>
+                  <option value="phone">Best on a phone</option>
+                  <option value="desktop">Best on a desktop</option>
+                </select>
               </label>
               <label>
                 Cover image
@@ -149,6 +216,39 @@ export default async function GamePage({ params, searchParams }: Props) {
               </label>
               <button type="submit">SAVE</button>
             </form>
+
+            <div className="shot-manager">
+              <h3>
+                Screenshots <small>{shots.length} of {MAX_SCREENSHOTS}</small>
+              </h3>
+              {shots.length > 0 && (
+                <ul>
+                  {shots.map((shot) => (
+                    <li key={shot.hash}>
+                      {/* eslint-disable-next-line @next/next/no-img-element -- served from our own storage */}
+                      <img src={`/media/${shot.hash}`} alt="" loading="lazy" />
+                      <form action={`/api/games/${game.slug}/screenshots`} method="post">
+                        <input type="hidden" name="remove" value={shot.hash} />
+                        <button type="submit" className="button">
+                          Remove
+                        </button>
+                      </form>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {shots.length < MAX_SCREENSHOTS && (
+                <form className="shot-add" action={`/api/games/${game.slug}/screenshots`} method="post" encType="multipart/form-data">
+                  <label>
+                    <small>Add one at a time. PNG, JPEG or WebP, up to 4 MB.</small>
+                    <input name="image" type="file" accept="image/png,image/jpeg,image/webp" required />
+                  </label>
+                  <button type="submit" className="button">
+                    Add screenshot
+                  </button>
+                </form>
+              )}
+            </div>
 
             <div className="manage-row">
               <p>
@@ -196,6 +296,16 @@ export default async function GamePage({ params, searchParams }: Props) {
                 </ul>
               )
             )}
+          </section>
+        )}
+        {creator && fromCreator.length > 0 && (
+          <section className="shelf">
+            <h2>More from @{creator.handle}</h2>
+            <div className="cards">
+              {fromCreator.map((other) => (
+                <GameCard key={other.slug} game={other} />
+              ))}
+            </div>
           </section>
         )}
         {others.length > 0 && (

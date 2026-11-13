@@ -1556,3 +1556,304 @@ table.people button[value="approve"] {
   flex: 0 0 auto;
   height: 100%;
 }
+
+/* ---------- A game's page: screenshots, how to play, and the facts ---------- */
+
+.about {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 20px;
+  align-items: start;
+}
+
+.about.solo {
+  grid-template-columns: 1fr;
+}
+
+.about-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+}
+
+.panel {
+  padding: 22px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--panel);
+  border: 1px solid var(--line);
+}
+
+.panel h2 {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-soft);
+}
+
+.prose {
+  max-width: 68ch;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.shots {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+  scrollbar-color: var(--raised) transparent;
+}
+
+.shots a {
+  flex: 0 0 auto;
+  height: clamp(180px, 26vw, 300px);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--navy);
+  scroll-snap-align: start;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.shots a:hover,
+.shots a:focus-visible {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.shots img {
+  display: block;
+  height: 100%;
+  width: auto;
+  max-width: 82vw;
+  object-fit: cover;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.info dl {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+}
+
+.info dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.info dt {
+  color: var(--mist);
+  font-size: 13px;
+}
+
+.info dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: right;
+}
+
+.about.solo .info {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.about.solo .info dl {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px 36px;
+}
+
+.about.solo .info dl div {
+  flex-direction: column;
+  gap: 2px;
+}
+
+.about.solo .info dd {
+  text-align: left;
+}
+
+.maker {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  text-decoration: none;
+}
+
+.about.solo .maker {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.maker small {
+  display: block;
+  color: var(--mist);
+  font-size: 11px;
+}
+
+.maker:hover b {
+  color: var(--accent-soft);
+}
+
+.maker-mark,
+.profile-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--accent-wash);
+  border: 1px solid var(--line-strong);
+  color: var(--accent-soft);
+  font-weight: 800;
+}
+
+.shot-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.shot-manager h3 {
+  font-size: 15px;
+}
+
+.shot-manager h3 small {
+  margin-left: 6px;
+  color: var(--mist);
+  font-weight: 400;
+}
+
+.shot-manager ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shot-manager li {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shot-manager li img {
+  height: 96px;
+  width: auto;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+}
+
+.shot-manager form {
+  margin: 0;
+}
+
+.shot-add {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.shot-add label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: var(--mist);
+}
+
+/* ---------- A creator's page ---------- */
+
+.profile {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+  padding: 28px;
+  border-radius: 18px;
+  background: linear-gradient(120deg, var(--accent-wash), transparent 60%), var(--panel);
+  border: 1px solid var(--line);
+}
+
+.profile-mark {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  font-size: 30px;
+}
+
+.profile-copy {
+  flex: 1 1 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profile h1 {
+  font-size: clamp(26px, 3.4vw, 40px);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+@media (max-width: 860px) {
+  .about {
+    grid-template-columns: 1fr;
+  }
+
+  .shots a {
+    height: 200px;
+  }
+}
+
+/* ---------- The make-a-game walkthrough ---------- */
+
+.shelf-note {
+  margin-top: -6px;
+  color: var(--mist);
+}
+
+.walkthrough li {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.walkthrough h3 {
+  margin: 4px 0 0;
+}
+
+.walkthrough .button {
+  margin-top: auto;
+}
+
+.say {
+  display: block;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--void);
+  border: 1px solid var(--line-strong);
+  color: var(--paper);
+  font: 600 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  user-select: all;
+}

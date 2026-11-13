@@ -28,6 +28,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await setDetails(stores, user, game, {
       description: String(form.get("description") ?? ""),
       display: form.get("display") === "portrait" ? "portrait" : "fill",
+      howTo: String(form.get("howTo") ?? ""),
+      devices: form.get("devices") === "phone" ? "phone" : form.get("devices") === "desktop" ? "desktop" : "any",
       cover: cover instanceof File && cover.size > 0 ? new Uint8Array(await cover.arrayBuffer()) : undefined,
     });
     return back("Saved.");
