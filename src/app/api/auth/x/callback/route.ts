@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const account = await accountFromCode(app, code, verifier);
-    const user = await store.signedIn(account);
+    const user = await store.signedIn(account, getConfig().adminHandles);
     const token = await store.startSession(user.id);
     const response = NextResponse.redirect(home, 303);
     response.cookies.delete(PENDING_COOKIE);

@@ -478,3 +478,83 @@ form.submit button {
 main > :last-child:not(.deck) {
   margin-bottom: 64px;
 }
+
+.notice a {
+  font-weight: 700;
+}
+
+.progress {
+  display: grid;
+  gap: 8px;
+  color: var(--mist);
+}
+
+.progress .bar {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--navy);
+  overflow: hidden;
+}
+
+.progress .bar span {
+  display: block;
+  height: 100%;
+  background: var(--ignition);
+  transition: width 0.2s linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress .bar span {
+    transition: none;
+  }
+}
+
+form.submit button:disabled,
+form.submit input:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+table.people {
+  width: 100%;
+  max-width: 720px;
+  border-collapse: collapse;
+}
+
+table.people th {
+  text-align: left;
+  padding: 8px 12px;
+  color: var(--mist);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+table.people td {
+  padding: 12px;
+  border-top: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+table.people td span {
+  display: block;
+  color: var(--mist);
+  font-size: 12px;
+}
+
+table.people form {
+  display: flex;
+  gap: 8px;
+}
+
+table.people select,
+table.people button {
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: var(--navy);
+  color: var(--paper);
+  font: inherit;
+  font-weight: 700;
+}

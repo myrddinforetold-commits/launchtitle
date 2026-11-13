@@ -1,6 +1,7 @@
 import { getConfig } from "@/lib/config";
 import { playUrl } from "@/lib/frame";
 import { addVersion, buildVersion, PROBE_SLUG, type Game } from "@/lib/games";
+import { randomToken } from "@/lib/auth/x";
 import { openStores } from "@/lib/stores";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,7 @@ async function check(name: string, run: () => Promise<void>): Promise<boolean> {
  * files are keyed by their contents, repeating this stores nothing new.
  */
 export async function GET() {
-  const { repo, store, live } = openStores();
+  const { repo, store, live, uploads } = openStores();
   const { databaseUrl, r2 } = getConfig();
   const page = new TextEncoder().encode(PROBE_PAGE);
 
@@ -51,11 +52,24 @@ export async function GET() {
     if ((await response.text()) !== PROBE_PAGE) throw new Error("play domain served a different page");
   });
 
+  // The same path a creator's browser takes: a one-off upload address, then read it back and clear it.
+  const upload =
+    uploads === null ||
+    (await check("uploads", async () => {
+      const id = randomToken();
+      const sent = await fetch(await uploads.begin("health", id), { method: "PUT", body: page });
+      if (!sent.ok) throw new Error(`upload address answered ${sent.status}`);
+      const back = await uploads.read("health", id, 1024);
+      await uploads.remove("health", id);
+      if (!(back instanceof Uint8Array) || back.byteLength !== page.byteLength) throw new Error("read back a different upload");
+    }));
+
   const body = {
-    ok: database && storage && play,
+    ok: database && storage && play && upload,
     database: { ok: database, kind: databaseUrl ? "postgres" : "local file" },
     storage: { ok: storage, kind: r2 ? "r2" : "local disk" },
     play: { ok: play, address: playUrl(PROBE_SLUG) },
+    uploads: { ok: upload, kind: uploads ? "r2" : "form" },
   };
   return Response.json(body, { status: body.ok ? 200 : 503, headers: { "cache-control": "no-store" } });
 }

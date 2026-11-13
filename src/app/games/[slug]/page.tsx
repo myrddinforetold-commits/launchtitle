@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { GameFrame } from "@/components/GameFrame";
+import { accounts } from "@/lib/auth/current";
 import { activeVersion, SERVED_STATES } from "@/lib/games";
 import { openStores } from "@/lib/stores";
 
@@ -16,10 +17,23 @@ export default async function GamePage({ params }: { params: Promise<{ slug: str
   const version = game && activeVersion(game);
   if (!game || !version || !SERVED_STATES.has(game.state)) notFound();
 
+  const creator = game.creatorId ? await (await accounts())?.byId(game.creatorId).catch(() => null) : null;
+
   return (
     <>
       <h1>{game.title}</h1>
-      <p className="lede">Click the game to play.</p>
+      <p className="lede">
+        {creator && (
+          <>
+            By{" "}
+            <a href={`https://x.com/${creator.handle}`} rel="noopener">
+              @{creator.handle}
+            </a>
+            .{" "}
+          </>
+        )}
+        Click the game to play.
+      </p>
       <GameFrame slug={game.slug} title={game.title} />
       <ul className="facts">
         <li>

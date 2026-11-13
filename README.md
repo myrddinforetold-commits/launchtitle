@@ -34,6 +34,7 @@ npm run lint
 | `DATABASE_URL` | unset | Postgres connection string. Unset, game records go to a JSON file in `LT_DATA_DIR` |
 | `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | unset | Cloudflare R2 bucket for game files. Unless all four are set, files go to `LT_DATA_DIR` |
 | `X_CLIENT_ID`, `X_CLIENT_SECRET` | unset | The X app's OAuth 2.0 client, for sign-in. Unset, sign-in is switched off |
+| `LT_ADMIN_HANDLES` | unset | X handles, comma-separated, that become admins when they sign in |
 | `LT_DATA_DIR` | `./.data` | Local fallback for game files and game records |
 | `LT_PLAY_HOST` | `play.localhost:4001` | Host that serves games, at `{slug}.<host>` |
 | `LT_PLAY_SCHEME` | `http` | `https` in production |
@@ -52,6 +53,12 @@ Tests run against a real Postgres inside the test process, so they need no datab
 
 People sign in with X (OAuth 2.0 with PKCE). We ask only to read who they are, match them on X's permanent account id, and keep the session in Postgres: the cookie holds a random value and the database holds only its hash. The X app's callback address must be `{LT_APP_ORIGIN}/api/auth/x/callback`.
 
+### Adding games
+
+During the pilot, adding games is by invitation. Admins come from `LT_ADMIN_HANDLES`; an admin makes someone a creator at `/admin`. A creator's browser uploads the zip straight to the bucket through a one-off address that lasts ten minutes, then the app unpacks it from there. A game's name belongs to whoever added it first: only they, or an admin, can publish a new build of it.
+
+The bucket needs a CORS rule allowing `PUT` from the store's origin.
+
 ### File storage
 
 Game files live in a private Cloudflare R2 bucket (`launchtitle-games`), keyed by the hash of their contents. The app also writes one small file per game, `live/{slug}.json`, saying which build is live.
@@ -64,7 +71,6 @@ Game files live in a private Cloudflare R2 bucket (`launchtitle-games`), keyed b
 
 ### What milestone 1 still needs
 
-- Imports that fit a hosted deployment: uploads go straight to the bucket, since a request to the app is capped at a few megabytes.
 - The scan, boot test and screenshot steps of the import pipeline.
 - A browser test proving a game frame cannot read the app's cookies or storage. Today's tests prove the server side of that: separate origins, no cookies, framing limited to the app.
 - Pinning the resolved IP address when crawling a URL. Today the private-address check looks at the host name only.

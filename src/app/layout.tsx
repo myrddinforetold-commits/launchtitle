@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 
 import { currentUser, xApp } from "@/lib/auth/current";
+import { canSubmit } from "@/lib/auth/sessions";
 import { getConfig } from "@/lib/config";
 
 import "./globals.css";
@@ -41,7 +42,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <span>LAUNCH TITLE</span>
           </Link>
           <nav>
-            {openImport && <Link href="/submit">Submit a game</Link>}
+            {user?.role === "admin" && <Link href="/admin">Admin</Link>}
+            {(openImport || canSubmit(user)) && <Link href="/submit">Add a game</Link>}
             {user ? (
               <form action="/api/auth/signout" method="post" className="who">
                 <span>@{user.handle}</span>

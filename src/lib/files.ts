@@ -11,7 +11,9 @@ export class ImportError extends Error {
       | "bad_zip"
       | "bad_url"
       | "blocked_host"
-      | "fetch_failed",
+      | "fetch_failed"
+      | "taken"
+      | "no_upload",
     message: string,
   ) {
     super(message);
