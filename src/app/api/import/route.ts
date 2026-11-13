@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { currentUser } from "@/lib/auth/current";
 import { canSubmit } from "@/lib/auth/sessions";
 import { getConfig, LIMITS } from "@/lib/config";
-import { ImportError, importUrl, importZip } from "@/lib/import";
+import { ImportError, importHtml, importUrl, importZip } from "@/lib/import";
 import { openStores } from "@/lib/stores";
 import { isUploadId } from "@/lib/uploads";
 
@@ -61,23 +61,36 @@ async function importUpload(request: NextRequest) {
   if (!user) return fail(401, "Sign in to add a game.");
   if (!canSubmit(user)) return fail(403, "Adding games is by invitation for now.");
 
-  let body: { uploadId?: unknown; title?: unknown };
+  let body: { uploadId?: unknown; title?: unknown; kind?: unknown; url?: unknown };
   try {
     body = await request.json();
   } catch {
     return fail(400, "That request could not be read.");
   }
   const title = typeof body.title === "string" ? body.title : "";
-  if (!isUploadId(body.uploadId)) return fail(400, "That upload could not be found. Try again.");
-
+  const owner = { id: user.id, admin: user.role === "admin" };
   const stores = openStores();
+
+  // A link: copy the game's files from where it is already hosted.
+  if (typeof body.url === "string" && body.url.trim()) {
+    try {
+      const game = await importUrl(stores, title, body.url.trim(), undefined, owner);
+      return NextResponse.json({ slug: game.slug });
+    } catch (error) {
+      if (error instanceof ImportError) return fail(400, error.message);
+      console.error("import: link failed:", error instanceof Error ? error.message : error);
+      return fail(500, "The import failed. Try again.");
+    }
+  }
+
+  if (!isUploadId(body.uploadId)) return fail(400, "That upload could not be found. Try again.");
   if (!stores.uploads) return fail(503, "Uploads are not set up.");
 
   try {
     const zip = await stores.uploads.read(user.id, body.uploadId, LIMITS.maxBytes);
     if (zip === null) return fail(400, "That upload could not be found. Try again.");
     if (zip === "too_large") return fail(400, "That zip is over the 200 MB limit.");
-    const game = await importZip(stores, title, zip, { id: user.id, admin: user.role === "admin" });
+    const game = body.kind === "html" ? await importHtml(stores, title, zip, owner) : await importZip(stores, title, zip, owner);
     return NextResponse.json({ slug: game.slug });
   } catch (error) {
     if (error instanceof ImportError) return fail(400, error.message);

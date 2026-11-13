@@ -14,3 +14,7 @@ export function playUrl(slug: string): string {
   const { playScheme, playHost } = getConfig();
   return `${playScheme}://${slug}.${playHost}/`;
 }
+
+/** The fade laid over a cover image in a hero, so the title below it stays readable. */
+export const COVER_FADE =
+  "linear-gradient(180deg, rgba(7,11,20,.3) 0%, rgba(7,11,20,0) 22%, rgba(7,11,20,.35) 58%, #070b14 100%)";
