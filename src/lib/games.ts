@@ -45,6 +45,8 @@ export type Game = {
   description?: string;
   /** The cover image: its key in file storage and its type. */
   cover?: { hash: string; type: string };
+  /** On a wide screen, a game made for phones is shown phone-shaped instead of stretched across the window. */
+  display?: "portrait";
   /** Set when the game plays from its creator's own site instead of from our copy. */
   externalUrl?: string;
 };

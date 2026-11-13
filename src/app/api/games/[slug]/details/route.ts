@@ -27,6 +27,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     await setDetails(stores, user, game, {
       description: String(form.get("description") ?? ""),
+      display: form.get("display") === "portrait" ? "portrait" : "fill",
       cover: cover instanceof File && cover.size > 0 ? new Uint8Array(await cover.arrayBuffer()) : undefined,
     });
     return back("Saved.");

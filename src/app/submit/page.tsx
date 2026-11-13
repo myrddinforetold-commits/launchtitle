@@ -18,8 +18,11 @@ export default async function Submit({ searchParams }: { searchParams: Promise<{
   if (hosted) {
     return (
       <>
-        <h1>Add a game</h1>
-        <p className="lede">Upload a zip of your game. It gets its own address and is playable straight away.</p>
+        <header className="page-head">
+          <p className="crumb">Creators</p>
+          <h1>Add a game</h1>
+        </header>
+        <p className="lede">Upload your game, or point us at where it lives. It gets its own page and is playable straight away.</p>
         {!user ? (
           <p className="notice">
             {xApp() ? (
@@ -47,7 +50,10 @@ export default async function Submit({ searchParams }: { searchParams: Promise<{
 
   return (
     <>
-      <h1>Add a game</h1>
+      <header className="page-head">
+        <p className="crumb">Creators</p>
+        <h1>Add a game</h1>
+      </header>
       <p className="lede">Upload a zip of a static web game, or give its public address.</p>
       {!openImport && <p className="notice">Submitting is switched off. For local development, start the app with LT_OPEN_IMPORT=1.</p>}
       {error && <p className="notice error">{error}</p>}

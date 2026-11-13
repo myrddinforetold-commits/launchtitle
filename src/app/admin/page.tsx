@@ -39,7 +39,10 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
 
   return (
     <>
-      <h1>Requests from X</h1>
+      <header className="page-head">
+        <p className="crumb">Creators</p>
+        <h1>Requests from X</h1>
+      </header>
       {note && (
         <p className="notice" role="status">
           {note}
