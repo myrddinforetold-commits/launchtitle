@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { currentUser } from "@/lib/auth/current";
 import { canSubmit } from "@/lib/auth/sessions";
 import { getConfig, LIMITS } from "@/lib/config";
-import { ImportError, importHtml, importUrl, importZip } from "@/lib/import";
+import { ImportError, importHtml, importUrl, importZip, linkGame } from "@/lib/import";
 import { openStores } from "@/lib/stores";
 import { isUploadId } from "@/lib/uploads";
 
@@ -61,7 +61,7 @@ async function importUpload(request: NextRequest) {
   if (!user) return fail(401, "Sign in to add a game.");
   if (!canSubmit(user)) return fail(403, "Adding games is by invitation for now.");
 
-  let body: { uploadId?: unknown; title?: unknown; kind?: unknown; url?: unknown };
+  let body: { uploadId?: unknown; title?: unknown; kind?: unknown; url?: unknown; linked?: unknown };
   try {
     body = await request.json();
   } catch {
@@ -74,7 +74,10 @@ async function importUpload(request: NextRequest) {
   // A link: copy the game's files from where it is already hosted.
   if (typeof body.url === "string" && body.url.trim()) {
     try {
-      const game = await importUrl(stores, title, body.url.trim(), undefined, owner);
+      const game =
+        body.linked === true
+          ? await linkGame(stores, title, body.url.trim(), undefined, owner)
+          : await importUrl(stores, title, body.url.trim(), undefined, owner);
       return NextResponse.json({ slug: game.slug });
     } catch (error) {
       if (error instanceof ImportError) return fail(400, error.message);

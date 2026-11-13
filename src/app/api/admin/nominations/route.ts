@@ -26,12 +26,14 @@ export async function POST(request: NextRequest) {
   // A failed import can be approved again; everything else is decided once.
   const from = nomination.state === "FAILED" ? "FAILED" : "AWAITING_REVIEW";
   let ok = false;
-  if (action === "approve" && title) ok = await store.move(id, from, "APPROVED", { title });
+  if ((action === "approve" || action === "approve-link") && title) {
+    ok = await store.move(id, from, "APPROVED", { title, mode: action === "approve-link" ? "link" : "copy" });
+  }
   else if (action === "reject") ok = await store.move(id, from, "REJECTED");
   console.log(`admin: @${me.handle} ${action} nomination ${id}: ${ok ? "done" : "no change"}`);
   page.searchParams.set(
     "note",
-    ok ? (action === "approve" ? "Approved. It will go live within a few minutes." : "Turned down.") : "That request had already been decided, or needs a name.",
+    ok ? (action === "reject" ? "Turned down." : "Approved. It will go live within a few minutes.") : "That request had already been decided, or needs a name.",
   );
   return NextResponse.redirect(page, 303);
 }

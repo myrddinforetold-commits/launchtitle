@@ -45,7 +45,14 @@ export type Game = {
   description?: string;
   /** The cover image: its key in file storage and its type. */
   cover?: { hash: string; type: string };
+  /** Set when the game plays from its creator's own site instead of from our copy. */
+  externalUrl?: string;
 };
+
+/** A game can be played if it has a build of ours to serve, or a site of its own to play from. */
+export function isPlayable(game: Game): boolean {
+  return SERVED_STATES.has(game.state) && Boolean(game.externalUrl || activeVersion(game));
+}
 
 export interface GameRepo {
   list(): Promise<Game[]>;

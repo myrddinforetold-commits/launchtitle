@@ -46,6 +46,10 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
         </p>
       )}
       <p className="lede">
+        <b>Copy</b> hosts the game&apos;s files here, and suits games that run entirely in the browser. <b>Link</b>{" "}
+        lists the game here but plays it from the creator&apos;s own site, for games that need their own server.
+      </p>
+      <p className="lede">
         {bot ? (
           <>
             The bot posts as <b>@{bot.handle}</b>. Last check: {lastCheck}. Replies in the last 24 hours: {sentToday}.{" "}
@@ -96,8 +100,11 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
                     <form action="/api/admin/nominations" method="post">
                       <input type="hidden" name="id" value={n.id} />
                       <input name="title" defaultValue={n.title ?? guess(n.sourceUrl)} maxLength={80} aria-label="Name for the game" required />
-                      <button type="submit" name="action" value="approve">
-                        Approve
+                      <button type="submit" name="action" value="approve" title="Copy the game's files and host them here">
+                        Approve: copy
+                      </button>
+                      <button type="submit" name="action" value="approve-link" title="List it here, play it from the creator's own site">
+                        Approve: link
                       </button>
                       <button type="submit" name="action" value="reject" formNoValidate>
                         Turn down

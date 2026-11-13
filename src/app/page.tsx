@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { accounts } from "@/lib/auth/current";
 import { COVER_FADE } from "@/lib/frame";
-import { SERVED_STATES, type Game } from "@/lib/games";
+import { isPlayable, type Game } from "@/lib/games";
 import { openStores } from "@/lib/stores";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +53,7 @@ function Cover({ game }: { game: Game }) {
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ signin?: string }> }) {
   const note = SIGNIN_NOTES[(await searchParams).signin ?? ""];
-  const games = (await openStores().repo.list()).filter((game) => SERVED_STATES.has(game.state));
+  const games = (await openStores().repo.list()).filter(isPlayable);
   const open = games.length > 0;
   // The newest game with a cover leads the store. Without one, the horizon does.
   const featured = games.find((game) => game.cover) ?? null;

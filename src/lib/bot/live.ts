@@ -2,7 +2,7 @@ import { Accounts } from "../auth/sessions";
 import { refreshTokens, type XApp } from "../auth/x";
 import { getConfig } from "../config";
 import type { Sql } from "../db/sql";
-import { importUrl } from "../import";
+import { importUrl, linkGame } from "../import";
 import { openStores } from "../stores";
 import { titleGuess } from "./parse";
 import { runBot, type RunReport } from "./run";
@@ -31,7 +31,11 @@ export async function runLiveBot(sql: Sql, app: XApp): Promise<RunReport> {
       if (!nomination.creatorXId) throw new Error("The creator's X account is not known");
       const creator = await accounts.ensure(nomination.creatorXId, nomination.creatorHandle);
       const title = nomination.title?.trim() || titleGuess(nomination.sourceUrl);
-      const game = await importUrl(stores, title, nomination.sourceUrl, undefined, { id: creator.id, admin: false });
+      const owner = { id: creator.id, admin: false };
+      const game =
+        nomination.mode === "link"
+          ? await linkGame(stores, title, nomination.sourceUrl, undefined, owner)
+          : await importUrl(stores, title, nomination.sourceUrl, undefined, owner);
       return game.slug;
     },
     async pauseGame(slug) {
