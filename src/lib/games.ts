@@ -66,6 +66,8 @@ export interface GameRepo {
   list(): Promise<Game[]>;
   get(slug: string): Promise<Game | null>;
   save(game: Game): Promise<void>;
+  /** Erases a game and every build of it. There is no undo. */
+  delete(slug: string): Promise<void>;
 }
 
 /** The health check publishes a tiny built-in page under this address. No game may take it. */
@@ -154,6 +156,9 @@ export class MemoryGameRepo implements GameRepo {
   async save(game: Game) {
     this.games.set(game.slug, structuredClone(game));
   }
+  async delete(slug: string) {
+    this.games.delete(slug);
+  }
 }
 
 /**
@@ -184,6 +189,15 @@ export class JsonFileGameRepo implements GameRepo {
     const all = await this.read();
     all[game.slug] = game;
     await mkdir(path.dirname(this.file), { recursive: true });
+    const tmp = `${this.file}.${process.pid}.tmp`;
+    await writeFile(tmp, JSON.stringify(all, null, 1));
+    await rename(tmp, this.file);
+  }
+
+  async delete(slug: string) {
+    const all = await this.read();
+    if (!(slug in all)) return;
+    delete all[slug];
     const tmp = `${this.file}.${process.pid}.tmp`;
     await writeFile(tmp, JSON.stringify(all, null, 1));
     await rename(tmp, this.file);

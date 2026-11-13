@@ -120,4 +120,9 @@ export class PgGameRepo implements GameRepo {
       ],
     );
   }
+
+  /** Builds, plays and saves go with the game: each refers to it and is removed by the database. */
+  async delete(slug: string): Promise<void> {
+    await this.sql.query("DELETE FROM games WHERE slug = $1", [slug]);
+  }
 }

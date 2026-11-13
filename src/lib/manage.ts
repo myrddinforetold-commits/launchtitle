@@ -95,3 +95,14 @@ export async function removeScreenshot(deps: Deps, user: User, game: Game, hash:
   await deps.repo.save(updated);
   return updated;
 }
+
+/**
+ * Erases a game for good: its page, builds, plays and saves. Admins only.
+ * The play domain is told first, so the game stops being served even if the rest fails.
+ * The files themselves stay in storage, where other games may share them.
+ */
+export async function deleteGame(deps: Deps, user: User, game: Game): Promise<void> {
+  if (user.role !== "admin") throw new ManageError("Only an admin can delete a game.");
+  await deps.live.retract(game.slug);
+  await deps.repo.delete(game.slug);
+}

@@ -8,7 +8,7 @@ import type { Sql } from "@/lib/db/sql";
 import { ImportError, importHtml } from "@/lib/import";
 import { sniffImage } from "@/lib/images";
 import { MemoryLiveIndex } from "@/lib/live";
-import { addScreenshot, canManage, ManageError, MAX_SCREENSHOTS, mayMove, removeScreenshot, setDetails, setState } from "@/lib/manage";
+import { addScreenshot, canManage, deleteGame, ManageError, MAX_SCREENSHOTS, mayMove, removeScreenshot, setDetails, setState } from "@/lib/manage";
 import { MemoryBlobStore } from "@/lib/storage";
 
 function pgliteSql(db: PGlite): Sql {
@@ -124,6 +124,23 @@ describe("managing a game", () => {
     expect(cleared.screenshots).toBeUndefined();
     expect(cleared.howTo).toBeUndefined();
     expect(cleared.devices).toBeUndefined();
+  });
+
+  it("lets only an admin delete a game, and frees its name", async () => {
+    const live = new MemoryLiveIndex();
+    const deps = { repo, store, live };
+    const game = await add();
+    await live.publish(game);
+    await expect(deleteGame(deps, maker, game)).rejects.toBeInstanceOf(ManageError);
+    expect(await repo.get("lantern-bay")).not.toBeNull();
+
+    await deleteGame(deps, admin, game);
+    expect(await repo.get("lantern-bay")).toBeNull();
+    expect(live.records.has("lantern-bay")).toBe(false);
+    expect(await sql.query("SELECT 1 FROM versions")).toEqual([]);
+
+    const again = await add();
+    expect(again.versions).toHaveLength(1);
   });
 
   it("refuses a cover that is not an image, and changes from anyone else", async () => {

@@ -169,6 +169,11 @@ export class BotStore {
     return rows.map(toNom);
   }
 
+  /** After a game is erased, its link can be tagged and added again. */
+  async releaseGame(slug: string): Promise<void> {
+    await this.sql.query("UPDATE nominations SET state = 'REMOVED', updated_at = now() WHERE game_slug = $1 AND state = 'LIVE'", [slug]);
+  }
+
   async forUrl(sourceUrl: string, states: NominationState[]): Promise<Nomination[]> {
     const rows = await this.sql.query<NomRow>(
       `SELECT ${NOM} FROM nominations WHERE source_url = $1 AND state = ANY($2::text[]) ORDER BY id`,

@@ -126,7 +126,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
       )}
 
       <h2>Games</h2>
-      <p className="lede">Every game, including paused and removed ones. A paused or removed game stops being served at once.</p>
+      <p className="lede">Every game, including paused and removed ones. A paused or removed game stops being served at once and can be brought back. Delete erases it.</p>
       <table className="people">
         <thead>
           <tr>
@@ -155,6 +155,14 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
                   </select>
                   <button type="submit">Save</button>
                 </form>
+                <details className="danger">
+                  <summary>Delete</summary>
+                  <form action="/api/admin/games/delete" method="post">
+                    <input type="hidden" name="slug" value={game.slug} />
+                    <span>Erases the page, builds, plays and saves. This cannot be undone.</span>
+                    <button type="submit">Delete {game.title} for good</button>
+                  </form>
+                </details>
               </td>
             </tr>
           ))}
