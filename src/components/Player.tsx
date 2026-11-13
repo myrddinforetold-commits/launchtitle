@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type Props = { title: string; src: string; sandbox: string; allow: string; portrait?: boolean };
 
@@ -49,7 +50,10 @@ export function Player({ title, src, sandbox, allow, portrait = false }: Props) 
         </svg>
         Play
       </button>
-      {open && (
+      {open &&
+        // Drawn at the top of the page, outside whatever holds the Play button,
+        // so the game's screen sits above the store's own bars on every device.
+        createPortal(
         <div ref={screen} className={portrait ? "player portrait" : "player"} role="dialog" aria-modal="true" aria-label={`Playing ${title}`}>
           <div className="player-bar">
             {/* eslint-disable-next-line @next/next/no-img-element -- a small static SVG */}
@@ -63,8 +67,9 @@ export function Player({ title, src, sandbox, allow, portrait = false }: Props) 
             </button>
           </div>
           <iframe src={src} title={title} sandbox={sandbox} allow={allow} referrerPolicy="no-referrer" />
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </>
   );
 }

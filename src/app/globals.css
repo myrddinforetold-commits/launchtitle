@@ -1400,3 +1400,29 @@ table.people button[value="approve"] {
       var(--void);
   }
 }
+
+/* The game's screen uses the full height of a phone, clear of the notch and the home bar. */
+.player {
+  height: 100dvh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media (max-width: 860px) {
+  .player-bar {
+    padding: 4px 8px 4px 12px;
+  }
+
+  .player-bar img {
+    display: none;
+  }
+}
+
+@media (max-width: 860px) {
+  /* A phone is already phone-shaped: the game takes the whole screen. */
+  .player.portrait iframe {
+    width: 100%;
+    aspect-ratio: auto;
+    border: 0;
+  }
+}
