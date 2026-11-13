@@ -25,6 +25,9 @@ class LazyPgGameRepo implements GameRepo {
   async save(game: Game) {
     return (await this.open()).save(game);
   }
+  async delete(slug: string) {
+    return (await this.open()).delete(slug);
+  }
 }
 
 /**

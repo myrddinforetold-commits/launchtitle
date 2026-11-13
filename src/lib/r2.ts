@@ -105,6 +105,12 @@ export class R2LiveIndex implements LiveIndex {
     const put = await this.bucket.request("PUT", liveKey(game.slug), body, "application/json");
     if (!put.ok) throw new Error(`File storage answered ${put.status} publishing ${game.slug}`);
   }
+
+  async retract(slug: string): Promise<void> {
+    const gone = await this.bucket.request("DELETE", liveKey(slug));
+    // Deleting something already gone is fine.
+    if (!gone.ok && gone.status !== 404) throw new Error(`File storage answered ${gone.status} retracting ${slug}`);
+  }
 }
 
 /** Zips on their way in. Browsers upload straight to the bucket; the app then reads the zip from there. */

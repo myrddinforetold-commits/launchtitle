@@ -1857,3 +1857,32 @@ table.people button[value="approve"] {
   font: 600 13px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
   user-select: all;
 }
+
+/* A destructive action, kept behind one extra click. */
+.danger {
+  margin-top: 8px;
+}
+
+.danger summary {
+  cursor: pointer;
+  color: var(--mist);
+  font-size: 12px;
+}
+
+.danger form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.danger span {
+  color: var(--mist);
+  font-size: 12px;
+}
+
+.danger button {
+  border-color: var(--caution);
+  color: var(--caution);
+}
