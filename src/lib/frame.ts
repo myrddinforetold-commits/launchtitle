@@ -7,7 +7,8 @@ import { getConfig } from "./config";
  * left out on purpose, so a game cannot move the player off the console.
  */
 export const GAME_FRAME_SANDBOX = "allow-scripts allow-same-origin allow-pointer-lock";
-export const GAME_FRAME_ALLOW = "fullscreen; gamepad";
+/** Autoplay is what lets a game start its sound: pressing Play in the store counts as the player asking for it. */
+export const GAME_FRAME_ALLOW = "fullscreen; gamepad; autoplay";
 
 /** The address a game is served from: its own subdomain of the play host. */
 export function playUrl(slug: string): string {

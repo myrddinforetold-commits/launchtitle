@@ -73,6 +73,7 @@ export async function runBot(deps: RunDeps): Promise<RunReport> {
       }
     } catch (error) {
       const message = (error instanceof Error ? error.message : String(error)).slice(0, 300);
+      console.error(`bot: could not bring in ${nomination.sourceUrl}: ${message}`);
       await store.move(nomination.id, "APPROVED", "FAILED", { error: message });
       report.failed += 1;
     }

@@ -67,6 +67,8 @@ export async function handle(request, env) {
     etag,
     // The same address serves whichever build is live, so browsers must check back each time.
     "cache-control": "no-cache",
+    // Phones ask for sound and video a piece at a time, and refuse to play them from a server that cannot answer that.
+    "accept-ranges": "bytes",
   };
   if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
 
@@ -76,9 +78,42 @@ export async function handle(request, env) {
     if (!found) return text(404, "Not found");
     return new Response(null, { status: 200, headers: { ...headers, "content-length": String(found.size) } });
   }
+  const asked = request.headers.get("range");
+  if (asked) {
+    const found = await env.BUCKET.head(key);
+    if (!found) return text(404, "Not found");
+    const span = byteRange(asked, found.size);
+    // A range we cannot make sense of is ignored and the whole file is sent, as the standard allows.
+    if (span === "unsatisfiable") return text(416, "Range not satisfiable", { "content-range": `bytes */${found.size}` });
+    if (span) {
+      const length = span.end - span.start + 1;
+      const part = await env.BUCKET.get(key, { range: { offset: span.start, length } });
+      if (!part) return text(404, "Not found");
+      return new Response(part.body, {
+        status: 206,
+        headers: { ...headers, "content-range": `bytes ${span.start}-${span.end}/${found.size}`, "content-length": String(length) },
+      });
+    }
+  }
   const file = await env.BUCKET.get(key);
   if (!file) return text(404, "Not found");
-  return new Response(file.body, { status: 200, headers });
+  return new Response(file.body, { status: 200, headers: { ...headers, "content-length": String(file.size) } });
+}
+
+// Reads "bytes=0-99", "bytes=100-" or "bytes=-50" against a file of the given size.
+// Returns { start, end } inclusive, "unsatisfiable", or null for anything else (several ranges, other units).
+function byteRange(header, size) {
+  const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
+  if (!match || (match[1] === "" && match[2] === "")) return null;
+  if (match[1] === "") {
+    const last = Number(match[2]);
+    if (last === 0 || size === 0) return "unsatisfiable";
+    return { start: Math.max(0, size - last), end: size - 1 };
+  }
+  const start = Number(match[1]);
+  const end = match[2] === "" ? size - 1 : Math.min(Number(match[2]), size - 1);
+  if (start >= size || start > end) return "unsatisfiable";
+  return { start, end };
 }
 
 const worker = {
