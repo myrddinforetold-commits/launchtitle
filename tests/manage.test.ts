@@ -8,7 +8,7 @@ import type { Sql } from "@/lib/db/sql";
 import { ImportError, importHtml } from "@/lib/import";
 import { sniffImage } from "@/lib/images";
 import { MemoryLiveIndex } from "@/lib/live";
-import { canManage, ManageError, mayMove, setDetails, setState } from "@/lib/manage";
+import { addScreenshot, canManage, ManageError, MAX_SCREENSHOTS, mayMove, removeScreenshot, setDetails, setState } from "@/lib/manage";
 import { MemoryBlobStore } from "@/lib/storage";
 
 function pgliteSql(db: PGlite): Sql {
@@ -97,6 +97,33 @@ describe("managing a game", () => {
     const wide = await setDetails({ repo, store, live }, maker, phone, { display: "fill" });
     expect(wide.display).toBeUndefined();
     expect((await repo.get("lantern-bay"))!.display).toBeUndefined();
+  });
+
+  it("saves how to play, what it is made for, and screenshots", async () => {
+    const live = new MemoryLiveIndex();
+    const deps = { repo, store, live };
+    let game = await setDetails(deps, maker, await add(), { howTo: "  Arrow keys to row.  ", devices: "phone" });
+    expect(game.howTo).toBe("Arrow keys to row.");
+    expect(game.devices).toBe("phone");
+
+    game = await addScreenshot(deps, maker, game, PNG);
+    await expect(addScreenshot(deps, maker, game, PNG)).rejects.toBeInstanceOf(ManageError);
+    await expect(addScreenshot(deps, maker, game, enc("<svg>"))).rejects.toBeInstanceOf(ManageError);
+    await expect(addScreenshot(deps, other, game, PNG)).rejects.toBeInstanceOf(ManageError);
+    const stored = (await repo.get("lantern-bay"))!;
+    expect(stored.screenshots).toEqual([{ hash: game.screenshots![0].hash, type: "image/png" }]);
+    expect(stored.howTo).toBe("Arrow keys to row.");
+    expect(stored.devices).toBe("phone");
+
+    for (let i = 1; i < MAX_SCREENSHOTS; i++) game = await addScreenshot(deps, maker, game, new Uint8Array([...PNG, i]));
+    await expect(addScreenshot(deps, maker, game, new Uint8Array([...PNG, 99]))).rejects.toBeInstanceOf(ManageError);
+
+    for (const shot of game.screenshots!) game = await removeScreenshot(deps, maker, game, shot.hash);
+    game = await setDetails(deps, maker, game, { howTo: "", devices: "any" });
+    const cleared = (await repo.get("lantern-bay"))!;
+    expect(cleared.screenshots).toBeUndefined();
+    expect(cleared.howTo).toBeUndefined();
+    expect(cleared.devices).toBeUndefined();
   });
 
   it("refuses a cover that is not an image, and changes from anyone else", async () => {

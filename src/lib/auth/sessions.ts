@@ -59,6 +59,16 @@ export class Accounts {
     return rows[0] ? toUser(rows[0]) : null;
   }
 
+  /** Looked up by X handle, whatever its capitals. */
+  async byHandle(handle: string): Promise<User | null> {
+    if (!/^[A-Za-z0-9_]{1,15}$/.test(handle)) return null;
+    const rows = await this.sql.query<UserRow>(
+      "SELECT id, x_account_id, handle, name, role FROM users WHERE lower(handle) = lower($1) ORDER BY last_seen_at DESC LIMIT 1",
+      [handle],
+    );
+    return rows[0] ? toUser(rows[0]) : null;
+  }
+
   /** Handles for a set of user ids, for crediting creators. */
   async handles(ids: readonly string[]): Promise<Map<string, string>> {
     const wanted = [...new Set(ids)].filter((id) => /^\d{1,18}$/.test(id));
