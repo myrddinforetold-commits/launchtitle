@@ -1,8 +1,11 @@
 import { ImportError, prepareFiles } from "../files";
 import { addVersion, buildVersion, isValidSlug, slugify, type Game, type GameRepo, type Version } from "../games";
 import type { LiveIndex } from "../live";
+import { sniffImage } from "../images";
 import type { BlobStore } from "../storage";
-import { crawlSite, type CrawlOptions } from "./crawl";
+import { getConfig } from "../config";
+import { crawlSite, isPrivateHost, type CrawlOptions } from "./crawl";
+import { fetchCover, framingBlocked, pageMeta } from "./meta";
 import { filesFromZip } from "./zip";
 
 export { ImportError };
@@ -43,6 +46,8 @@ async function publish(
     ...(owner ? { creatorId: owner.id } : {}),
   };
   const updated = addVersion(game, version);
+  // A fresh copy of ours replaces playing from the creator's site.
+  delete updated.externalUrl;
   await deps.repo.save(updated);
   // Last, so the play domain only ever points at a build that is fully stored and recorded.
   await deps.live?.publish(updated);
@@ -67,7 +72,26 @@ export async function importHtml(deps: Deps, title: string, html: Uint8Array, ow
   return publish(deps, title, [["index.html", html]], { kind: "html" }, [], owner);
 }
 
-/** Import a game by copying its static files from a public URL. */
+/**
+ * Fill in a cover and description from what the game's own page declares for
+ * link sharing. Only fills blanks: anything the creator set stays as it is.
+ */
+async function autofill(deps: Deps, game: Game, html: string, baseUrl: string, options?: CrawlOptions): Promise<Game> {
+  if (game.cover && game.description) return game;
+  const meta = pageMeta(html, baseUrl);
+  const updated: Game = { ...game };
+  if (!updated.description && meta.description) updated.description = meta.description;
+  if (!updated.cover && meta.image) {
+    const bytes = await fetchCover(meta.image, options);
+    const type = bytes && sniffImage(bytes);
+    if (bytes && type) updated.cover = { hash: await deps.store.put(bytes), type };
+  }
+  if (updated.cover === game.cover && updated.description === game.description) return game;
+  await deps.repo.save(updated);
+  return updated;
+}
+
+/** Import a game by copying its static files from where it is hosted. */
 export async function importUrl(
   deps: Deps,
   title: string,
@@ -76,5 +100,63 @@ export async function importUrl(
   owner?: Owner,
 ): Promise<Game> {
   const { files, externalDomains } = await crawlSite(url, options);
-  return publish(deps, title, files, { kind: "crawl", url }, externalDomains, owner);
+  const game = await publish(deps, title, files, { kind: "crawl", url }, externalDomains, owner);
+  const index = files.find(([name]) => name === "index.html");
+  return index ? autofill(deps, game, new TextDecoder().decode(index[1]), url, options) : game;
+}
+
+/**
+ * List a game that keeps playing from its creator's own site. For games that
+ * need their own server (accounts, multiplayer, saved progress), which a copy cannot run.
+ * Nothing is copied; the store shows the game's page and frames the site when Play is pressed.
+ */
+export async function linkGame(deps: Deps, title: string, url: string, options?: CrawlOptions, owner?: Owner): Promise<Game> {
+  const cleanTitle = title.trim().slice(0, 80);
+  if (!cleanTitle) throw new ImportError("empty", "The game needs a name.");
+  const slug = slugify(cleanTitle);
+  if (!isValidSlug(slug)) throw new ImportError("empty", "That name cannot be used as a game address.");
+
+  let target: URL;
+  try {
+    target = new URL(url);
+  } catch {
+    throw new ImportError("bad_url", "That is not a valid address.");
+  }
+  if (target.protocol !== "https:" && !options?.allowPrivateHosts) throw new ImportError("bad_url", "The address must start with https://.");
+  if (!options?.allowPrivateHosts && isPrivateHost(target.hostname)) throw new ImportError("blocked_host", "That address cannot be used.");
+  target.hash = "";
+
+  const existing = await deps.repo.get(slug);
+  if (existing && owner && !owner.admin && existing.creatorId !== owner.id) {
+    throw new ImportError("taken", "That name is already taken. Pick another.");
+  }
+
+  let response: Response;
+  try {
+    response = await (options?.fetchImpl ?? fetch)(target.toString(), { redirect: "follow", signal: AbortSignal.timeout(15_000) });
+  } catch {
+    throw new ImportError("fetch_failed", "That site could not be reached.");
+  }
+  if (!response.ok) throw new ImportError("fetch_failed", `That site answered ${response.status}.`);
+  const { appOrigin } = getConfig();
+  if (framingBlocked(response.headers, [appOrigin])) {
+    throw new ImportError(
+      "blocked_host",
+      `That site does not allow being shown inside another site. Its owner needs to allow ${new URL(appOrigin).host} to frame it.`,
+    );
+  }
+  const html = (await response.text()).slice(0, 500_000);
+
+  const game: Game = existing ?? {
+    slug,
+    title: cleanTitle,
+    state: "HOSTED",
+    versions: [],
+    activeVersionId: null,
+    createdAt: new Date().toISOString(),
+    ...(owner ? { creatorId: owner.id } : {}),
+  };
+  const updated: Game = { ...game, externalUrl: target.toString() };
+  await deps.repo.save(updated);
+  return autofill(deps, updated, html, target.toString(), options);
 }

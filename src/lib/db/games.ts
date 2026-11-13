@@ -11,12 +11,13 @@ type Row = {
   description: string;
   cover_hash: string | null;
   cover_type: string | null;
+  external_url: string | null;
   versions: Version[];
 };
 
 const SELECT_GAME = `
   SELECT g.slug, g.title, g.state, g.active_version, g.created_at, g.creator_user_id,
-    g.description, g.cover_hash, g.cover_type,
+    g.description, g.cover_hash, g.cover_type, g.external_url,
     COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
         'id', v.version,
@@ -43,6 +44,7 @@ function toGame(row: Row): Game {
     ...(row.creator_user_id === null ? {} : { creatorId: String(row.creator_user_id) }),
     ...(row.description ? { description: row.description } : {}),
     ...(row.cover_hash && row.cover_type ? { cover: { hash: row.cover_hash, type: row.cover_type } } : {}),
+    ...(row.external_url ? { externalUrl: row.external_url } : {}),
   };
 }
 
@@ -70,11 +72,12 @@ export class PgGameRepo implements GameRepo {
     await this.sql.query(
       `WITH g AS (
          INSERT INTO games (slug, title, state, active_version, created_at, creator_user_id,
-                            description, cover_hash, cover_type)
-         VALUES ($1, $2, $3, $4, $5, $7, $8, $9, $10)
+                            description, cover_hash, cover_type, external_url)
+         VALUES ($1, $2, $3, $4, $5, $7, $8, $9, $10, $11)
          ON CONFLICT (slug) DO UPDATE
            SET title = EXCLUDED.title, state = EXCLUDED.state, active_version = EXCLUDED.active_version,
                description = EXCLUDED.description, cover_hash = EXCLUDED.cover_hash, cover_type = EXCLUDED.cover_type,
+               external_url = EXCLUDED.external_url,
                -- A game's creator is set once and never reassigned by a save.
                creator_user_id = COALESCE(games.creator_user_id, EXCLUDED.creator_user_id)
          RETURNING id
@@ -99,6 +102,7 @@ export class PgGameRepo implements GameRepo {
         game.description ?? "",
         game.cover?.hash ?? null,
         game.cover?.type ?? null,
+        game.externalUrl ?? null,
       ],
     );
   }

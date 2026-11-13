@@ -3,13 +3,14 @@
 import { useRef, useState } from "react";
 
 type Stage = { name: "idle" } | { name: "uploading"; percent: number } | { name: "importing" } | { name: "error"; message: string };
-type Mode = "zip" | "html" | "paste" | "link";
+type Mode = "zip" | "html" | "paste" | "link" | "linked";
 
 const MODES: { id: Mode; label: string }[] = [
   { id: "zip", label: "Zip file" },
   { id: "html", label: "Single page" },
   { id: "paste", label: "Paste code" },
-  { id: "link", label: "Link" },
+  { id: "link", label: "Copy from a link" },
+  { id: "linked", label: "Play from my site" },
 ];
 
 function put(url: string, body: Blob, onProgress: (percent: number) => void): Promise<void> {
@@ -54,10 +55,18 @@ export function Uploader({ maxBytes }: { maxBytes: number }) {
     const title = String(data.get("title") ?? "").trim();
 
     try {
-      if (mode === "link") {
+      if (mode === "link" || mode === "linked") {
         const url = String(data.get("url") ?? "").trim();
         if (!url) return error("Add the game\u2019s address.");
-        return await finish({ title, url });
+        setStage({ name: "importing" });
+        const imported = await fetch("/api/import", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ title, url, linked: mode === "linked" }),
+        });
+        const result = await imported.json().catch(() => ({}));
+        if (!imported.ok) return error(result.error ?? "The import failed. Try again.");
+        return window.location.assign(`/games/${result.slug}`);
       }
 
       let body: Blob;
@@ -125,6 +134,17 @@ export function Uploader({ maxBytes }: { maxBytes: number }) {
           The game&apos;s code
           <small>Paste the whole HTML page. It must run on its own, without a build step.</small>
           <textarea name="code" rows={10} spellCheck={false} disabled={busy} />
+        </label>
+      )}
+      {mode === "linked" && (
+        <label>
+          Where the game is hosted
+          <small>
+            For games that need their own server: accounts, multiplayer, saved progress. The game is listed here and
+            plays from your site, so your site must allow launchtitle.gg to show it in a frame. Only add games that are
+            yours.
+          </small>
+          <input name="url" type="url" placeholder="https://" inputMode="url" disabled={busy} />
         </label>
       )}
       {mode === "link" && (

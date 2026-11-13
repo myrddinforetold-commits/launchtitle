@@ -61,7 +61,9 @@ During the pilot, adding games is by invitation. Admins come from `LT_ADMIN_HAND
 
 The bucket needs a CORS rule allowing `PUT` from the store's origin.
 
-A game can arrive four ways: a zip, a single HTML page, pasted code, or a link to where it is already hosted (the app copies its static files). Each game has a description and a cover image, shown on its page and on the store's front. Cover images are served from `/media/{hash}`, which answers only for real PNG, JPEG or WebP data, so game files in the same storage can never be reached from the store's own address.
+A game can arrive four ways as a copy: a zip, a single HTML page, pasted code, or a link to where it is already hosted (the app copies its static files). A fifth way keeps the game where it is: a **linked** game is listed in the store but plays from its creator's own site, framed in the store's player. That is for games that need their own server, which a copy cannot run. The creator's site must allow the store to frame it; the app checks this up front and says so if not. Uploading a fresh copy later switches a linked game back.
+
+When a game comes in by link, either way, the app fills a blank cover and description from the preview image and description the game's page declares. Each game has a description and a cover image, shown on its page and on the store's front. Cover images are served from `/media/{hash}`, which answers only for real PNG, JPEG or WebP data, so game files in the same storage can never be reached from the store's own address.
 
 Creators can pause and restore their own games. Admins can also remove a game, at `/admin`. A paused or removed game stops being served at once.
 

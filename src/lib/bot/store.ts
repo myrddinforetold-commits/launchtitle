@@ -24,6 +24,8 @@ export type Nomination = {
   title: string | null;
   gameSlug: string | null;
   error: string | null;
+  /** How to bring the game in once approved: copy its files, or play it from the creator's site. */
+  mode: "copy" | "link";
   createdAt: string;
 };
 
@@ -51,6 +53,7 @@ type NomRow = {
   title: string | null;
   game_slug: string | null;
   error: string | null;
+  mode: "copy" | "link";
   created_at: Date | string;
 };
 
@@ -67,10 +70,11 @@ const toNom = (r: NomRow): Nomination => ({
   title: r.title,
   gameSlug: r.game_slug,
   error: r.error,
+  mode: r.mode,
   createdAt: new Date(r.created_at).toISOString(),
 });
 
-const NOM = "id, post_id, conversation_id, nominator_x_id, nominator_handle, creator_x_id, creator_handle, source_url, state, title, game_slug, error, created_at";
+const NOM = "id, post_id, conversation_id, nominator_x_id, nominator_handle, creator_x_id, creator_handle, source_url, state, title, game_slug, error, mode, created_at";
 
 /** Everything the bot remembers. */
 export class BotStore {
@@ -140,7 +144,7 @@ export class BotStore {
   // --- nominations
 
   /** Returns null when this post was already recorded. */
-  async createNomination(n: Omit<Nomination, "id" | "title" | "gameSlug" | "error" | "createdAt">): Promise<Nomination | null> {
+  async createNomination(n: Omit<Nomination, "id" | "title" | "gameSlug" | "error" | "mode" | "createdAt">): Promise<Nomination | null> {
     const rows = await this.sql.query<NomRow>(
       `INSERT INTO nominations (post_id, conversation_id, nominator_x_id, nominator_handle, creator_x_id, creator_handle, source_url, state)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -188,13 +192,14 @@ export class BotStore {
     id: string,
     from: NominationState,
     to: NominationState,
-    set: { title?: string; gameSlug?: string; error?: string } = {},
+    set: { title?: string; gameSlug?: string; error?: string; mode?: "copy" | "link" } = {},
   ): Promise<boolean> {
     const rows = await this.sql.query(
       `UPDATE nominations
-       SET state = $3, title = COALESCE($4, title), game_slug = COALESCE($5, game_slug), error = $6, updated_at = now()
+       SET state = $3, title = COALESCE($4, title), game_slug = COALESCE($5, game_slug), error = $6,
+           mode = COALESCE($7, mode), updated_at = now()
        WHERE id = $1 AND state = $2 RETURNING id`,
-      [id, from, to, set.title ?? null, set.gameSlug ?? null, set.error ?? null],
+      [id, from, to, set.title ?? null, set.gameSlug ?? null, set.error ?? null, set.mode ?? null],
     );
     return rows.length === 1;
   }
