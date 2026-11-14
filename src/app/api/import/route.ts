@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { after, NextResponse, type NextRequest } from "next/server";
 
 import { currentUser } from "@/lib/auth/current";
 import { canSubmit } from "@/lib/auth/sessions";
@@ -54,6 +54,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
+/** Starts the start-up check once the reply has gone, so adding a game stays quick. The schedule is the backstop. */
+function startCheck() {
+  after(() => fetch(new URL("/api/cron/checks", getConfig().appOrigin)).catch(() => {}));
+}
+
 async function importUpload(request: NextRequest) {
   const fail = (status: number, error: string) => NextResponse.json({ error }, { status });
 
@@ -78,6 +83,7 @@ async function importUpload(request: NextRequest) {
         body.linked === true
           ? await linkGame(stores, title, body.url.trim(), undefined, owner)
           : await importUrl(stores, title, body.url.trim(), undefined, owner);
+      startCheck();
       return NextResponse.json({ slug: game.slug });
     } catch (error) {
       if (error instanceof ImportError) return fail(400, error.message);
@@ -94,6 +100,7 @@ async function importUpload(request: NextRequest) {
     if (zip === null) return fail(400, "That upload could not be found. Try again.");
     if (zip === "too_large") return fail(400, "That zip is over the 200 MB limit.");
     const game = body.kind === "html" ? await importHtml(stores, title, zip, owner) : await importZip(stores, title, zip, owner);
+    startCheck();
     return NextResponse.json({ slug: game.slug });
   } catch (error) {
     if (error instanceof ImportError) return fail(400, error.message);

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { GameCard } from "@/components/GameCard";
 import { accounts, plays } from "@/lib/auth/current";
-import { isPlayable } from "@/lib/games";
+import { isListed } from "@/lib/games";
 import { playsLabel, type PlayStats } from "@/lib/plays";
 import { openStores } from "@/lib/stores";
 
@@ -16,7 +16,7 @@ type Props = { params: Promise<{ handle: string }> };
 async function load(handle: string) {
   const creator = await (await accounts())?.byHandle(handle).catch(() => null);
   if (!creator) return null;
-  const games = (await openStores().repo.list()).filter((game) => game.creatorId === creator.id && isPlayable(game));
+  const games = (await openStores().repo.list()).filter((game) => game.creatorId === creator.id && isListed(game));
   return games.length > 0 ? { creator, games } : null;
 }
 

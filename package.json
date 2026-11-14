@@ -14,10 +14,12 @@
     "vercel-build": "tsx scripts/migrate.ts && next build"
   },
   "dependencies": {
+    "@sparticuz/chromium": "^153.0.0",
     "aws4fetch": "^1.0.20",
     "fflate": "^0.8.3",
     "next": "15.5.29",
     "pg": "^8.23.1",
+    "puppeteer-core": "^25.17.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "sharp": "^0.35.5"

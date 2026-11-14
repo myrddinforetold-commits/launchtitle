@@ -55,11 +55,28 @@ export type Game = {
   howTo?: string;
   /** What the game is made for. Absent when it plays well on both. */
   devices?: "phone" | "desktop";
+  /** The start-up check: does the game load and draw? Absent for games added before it existed. */
+  check?: { state: "pending" | "passed" | "failed" | "skipped"; note?: string; at?: string };
 };
 
 /** A game can be played if it has a build of ours to serve, or a site of its own to play from. */
 export function isPlayable(game: Game): boolean {
   return SERVED_STATES.has(game.state) && Boolean(game.externalUrl || activeVersion(game));
+}
+
+/** A game waiting on its start-up check is listed anyway after this long, in case the check never runs. */
+export const CHECK_WAIT_MS = 15 * 60 * 1000;
+
+/**
+ * Should the store show this game on its shelves? It must be playable, and it
+ * must not be waiting on, or have failed, its start-up check. Its own page
+ * still opens for anyone with the link.
+ */
+export function isListed(game: Game, now = Date.now()): boolean {
+  if (!isPlayable(game)) return false;
+  if (game.check?.state === "failed") return false;
+  if (game.check?.state === "pending") return now - Date.parse(game.check.at ?? "") > CHECK_WAIT_MS;
+  return true;
 }
 
 export interface GameRepo {

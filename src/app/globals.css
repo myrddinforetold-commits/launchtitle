@@ -1886,3 +1886,35 @@ table.people button[value="approve"] {
   border-color: var(--caution);
   color: var(--caution);
 }
+
+/* The start-up check, in a game's manage section. */
+.check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+  background: var(--void);
+}
+
+.check h3 {
+  font-size: 15px;
+}
+
+.check p {
+  margin-top: 4px;
+  max-width: 68ch;
+  color: var(--mist);
+  font-size: 13px;
+}
+
+.check.failed {
+  border-color: var(--caution);
+}
+
+.check.passed h3 {
+  color: var(--accent-soft);
+}

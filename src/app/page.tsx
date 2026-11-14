@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { GameCard } from "@/components/GameCard";
 import { accounts, currentUser, plays, xApp } from "@/lib/auth/current";
-import { isPlayable, type Game } from "@/lib/games";
+import { isListed, type Game } from "@/lib/games";
 import { playsLabel, type PlayStats } from "@/lib/plays";
 import { openStores } from "@/lib/stores";
 
@@ -19,7 +19,7 @@ const SIGNIN_NOTES: Record<string, string> = {
 
 export default async function Home({ searchParams }: { searchParams: Promise<{ signin?: string }> }) {
   const note = SIGNIN_NOTES[(await searchParams).signin ?? ""];
-  const games = (await openStores().repo.list()).filter(isPlayable);
+  const games = (await openStores().repo.list()).filter((game) => isListed(game));
   // The newest game with a cover leads the store. Without one, the horizon does.
   const featured = games.find((game) => game.cover) ?? games[0] ?? null;
   const handles =
