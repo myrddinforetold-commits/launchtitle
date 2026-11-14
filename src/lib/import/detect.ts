@@ -30,3 +30,26 @@ export function serverSigns(files: Iterable<readonly [string, Uint8Array]>): str
   }
   return [...found];
 }
+
+/** Art, sound, models and data: the files a game fetches while it runs. */
+const RUNTIME_EXT = "glb|gltf|bin|ktx2|hdr|png|jpe?g|webp|avif|gif|mp3|ogg|wav|m4a|mp4|webm|wasm|data|json";
+// A path with a ${...} in the middle or at the end, such as `models/${name}.glb`.
+// A ${...} only at the very start is a folder prefix and is fine: the copier follows those.
+const BUILT_NAME = new RegExp(`\`[^\`\\n]{0,160}[\\w/.-]\\$\\{[^}\`]{1,60}\\}[^\`\\n]{0,60}\\.(?:${RUNTIME_EXT})\``, "i");
+
+/**
+ * Signs that a copy made by following links would be missing files. A game
+ * that builds file names as it runs (`models/${name}.glb`) asks for files the
+ * copier never saw. Such a game should play from its creator's site, or be
+ * uploaded whole as a zip.
+ */
+export function copyGaps(files: Iterable<readonly [string, Uint8Array]>): string[] {
+  const decoder = new TextDecoder();
+  let scanned = 0;
+  for (const [name, bytes] of files) {
+    if (!CODE.test(name) || scanned + bytes.byteLength > MAX_SCAN_BYTES) continue;
+    scanned += bytes.byteLength;
+    if (BUILT_NAME.test(decoder.decode(bytes))) return ["builds the names of its files as it runs, so a copy would be missing some"];
+  }
+  return [];
+}

@@ -64,6 +64,10 @@ function refsInScript(js: string): string[] {
   const refs: string[] = [];
   const re = new RegExp(`["'\`]([^"'\`\\s<>{}$]{1,200}\\.(?:${ASSET_EXT}))(?:\\?[^"'\`\\s]*)?["'\`]`, "gi");
   for (const m of js.matchAll(re)) refs.push(m[1]);
+  // Built games often write `${base}models/bird.glb`, where base is the game's own folder.
+  // The part after the prefix is the path; anything with a second ${...} cannot be known ahead of time.
+  const prefixed = new RegExp(`\`\\$\\{[^}\`]{1,60}\\}([^"'\`\\s<>{}$]{1,200}\\.(?:${ASSET_EXT}))(?:\\?[^\`\\s$]*)?\``, "gi");
+  for (const m of js.matchAll(prefixed)) refs.push(m[1].replace(/^\/+/, ""));
   return refs;
 }
 
