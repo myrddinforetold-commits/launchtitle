@@ -43,7 +43,7 @@ describe("Postgres game store", () => {
   it("applies migrations once", async () => {
     expect(await migrate(sql)).toEqual([]);
     const rows = await sql.query<{ name: string }>("SELECT name FROM schema_migrations");
-    expect(rows.map((r) => r.name).sort()).toEqual(["0001_games.sql", "0002_users.sql", "0003_game_creator.sql", "0004_game_details.sql", "0005_bot.sql", "0006_linked_games.sql", "0007_game_display.sql", "0008_auto_mode.sql", "0009_plays.sql", "0010_game_page.sql"]);
+    expect(rows.map((r) => r.name).sort()).toEqual(["0001_games.sql", "0002_users.sql", "0003_game_creator.sql", "0004_game_details.sql", "0005_bot.sql", "0006_linked_games.sql", "0007_game_display.sql", "0008_auto_mode.sql", "0009_plays.sql", "0010_game_page.sql", "0011_startup_check.sql"]);
   });
 
   it("returns nothing for a game it does not have", async () => {
@@ -109,5 +109,21 @@ describe("Postgres game store", () => {
     await repo.save(newGame("older", "2026-11-01T00:00:00.000Z"));
     await repo.save(newGame("newer", "2026-11-12T00:00:00.000Z"));
     expect((await repo.list()).map((g) => g.slug)).toEqual(["newer", "older"]);
+  });
+
+  it("keeps a game's start-up check", async () => {
+    const { PGlite } = await import("@electric-sql/pglite");
+    const db = new PGlite();
+    const sql = {
+      query: async <T,>(text: string, params: unknown[] = []) => (await db.query(text, params)).rows as T[],
+      exec: async (text: string) => void (await db.exec(text)),
+    };
+    await migrate(sql);
+    const repo = new PgGameRepo(sql);
+    const base = { slug: "checked", title: "Checked", state: "HOSTED" as const, versions: [], activeVersionId: null, createdAt: new Date().toISOString() };
+    await repo.save({ ...base, externalUrl: "https://checked.example/", check: { state: "failed", note: "The game showed a blank screen.", at: "2026-11-14T02:00:00.000Z" } });
+    expect((await repo.get("checked"))!.check).toEqual({ state: "failed", note: "The game showed a blank screen.", at: "2026-11-14T02:00:00.000Z" });
+    await repo.save({ ...base, externalUrl: "https://checked.example/" });
+    expect((await repo.get("checked"))!.check).toBeUndefined();
   });
 });

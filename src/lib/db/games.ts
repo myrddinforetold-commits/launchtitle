@@ -16,12 +16,15 @@ type Row = {
   screenshots: { hash: string; type: string }[];
   how_to: string;
   devices: "any" | "phone" | "desktop";
+  check_state: "none" | "pending" | "passed" | "failed" | "skipped";
+  check_note: string;
+  check_at: string | Date | null;
   versions: Version[];
 };
 
 const SELECT_GAME = `
   SELECT g.slug, g.title, g.state, g.active_version, g.created_at, g.creator_user_id,
-    g.description, g.cover_hash, g.cover_type, g.external_url, g.display, g.screenshots, g.how_to, g.devices,
+    g.description, g.cover_hash, g.cover_type, g.external_url, g.display, g.screenshots, g.how_to, g.devices, g.check_state, g.check_note, g.check_at,
     COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
         'id', v.version,
@@ -53,6 +56,15 @@ function toGame(row: Row): Game {
     ...(row.screenshots?.length ? { screenshots: row.screenshots } : {}),
     ...(row.how_to ? { howTo: row.how_to } : {}),
     ...(row.devices === "phone" || row.devices === "desktop" ? { devices: row.devices } : {}),
+    ...(row.check_state && row.check_state !== "none"
+      ? {
+          check: {
+            state: row.check_state,
+            ...(row.check_note ? { note: row.check_note } : {}),
+            ...(row.check_at ? { at: new Date(row.check_at).toISOString() } : {}),
+          },
+        }
+      : {}),
   };
 }
 
@@ -81,13 +93,14 @@ export class PgGameRepo implements GameRepo {
       `WITH g AS (
          INSERT INTO games (slug, title, state, active_version, created_at, creator_user_id,
                             description, cover_hash, cover_type, external_url, display,
-                            screenshots, how_to, devices)
-         VALUES ($1, $2, $3, $4, $5, $7, $8, $9, $10, $11, $12, $13::jsonb, $14, $15)
+                            screenshots, how_to, devices, check_state, check_note, check_at)
+         VALUES ($1, $2, $3, $4, $5, $7, $8, $9, $10, $11, $12, $13::jsonb, $14, $15, $16, $17, $18)
          ON CONFLICT (slug) DO UPDATE
            SET title = EXCLUDED.title, state = EXCLUDED.state, active_version = EXCLUDED.active_version,
                description = EXCLUDED.description, cover_hash = EXCLUDED.cover_hash, cover_type = EXCLUDED.cover_type,
                external_url = EXCLUDED.external_url, display = EXCLUDED.display,
                screenshots = EXCLUDED.screenshots, how_to = EXCLUDED.how_to, devices = EXCLUDED.devices,
+               check_state = EXCLUDED.check_state, check_note = EXCLUDED.check_note, check_at = EXCLUDED.check_at,
                -- A game's creator is set once and never reassigned by a save.
                creator_user_id = COALESCE(games.creator_user_id, EXCLUDED.creator_user_id)
          RETURNING id
@@ -117,6 +130,9 @@ export class PgGameRepo implements GameRepo {
         JSON.stringify(game.screenshots ?? []),
         game.howTo ?? "",
         game.devices ?? "any",
+        game.check?.state ?? "none",
+        game.check?.note ?? "",
+        game.check?.at ?? null,
       ],
     );
   }

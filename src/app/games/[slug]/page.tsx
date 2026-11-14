@@ -6,7 +6,7 @@ import { GameCard } from "@/components/GameCard";
 import { Player } from "@/components/Player";
 import { accounts, currentUser, plays, xApp } from "@/lib/auth/current";
 import { GAME_FRAME_ALLOW, GAME_FRAME_SANDBOX, LINKED_FRAME_SANDBOX, playUrl } from "@/lib/frame";
-import { activeVersion, isPlayable, SERVED_STATES } from "@/lib/games";
+import { activeVersion, isListed, isPlayable, SERVED_STATES } from "@/lib/games";
 import { canManage, MAX_DESCRIPTION, MAX_HOW_TO, MAX_SCREENSHOTS, mayMove } from "@/lib/manage";
 import { playsLabel } from "@/lib/plays";
 import { openStores } from "@/lib/stores";
@@ -43,7 +43,7 @@ export default async function GamePage({ params, searchParams }: Props) {
 
   const creator = game.creatorId ? await (await accounts())?.byId(game.creatorId).catch(() => null) : null;
   const playable = isPlayable(game);
-  const rest = (await openStores().repo.list()).filter((other) => other.slug !== game.slug && isPlayable(other));
+  const rest = (await openStores().repo.list()).filter((other) => other.slug !== game.slug && isListed(other));
   const fromCreator = game.creatorId ? rest.filter((other) => other.creatorId === game.creatorId).slice(0, 8) : [];
   const others = rest.filter((other) => !fromCreator.includes(other)).slice(0, 8);
   const shots = game.screenshots ?? [];
@@ -250,6 +250,47 @@ export default async function GamePage({ params, searchParams }: Props) {
                 </form>
               )}
             </div>
+
+            {game.check && (
+              <div className={`check ${game.check.state}`}>
+                <div>
+                  <h3>
+                    Start-up check:{" "}
+                    {game.check.state === "pending"
+                      ? "running"
+                      : game.check.state === "passed"
+                        ? "passed"
+                        : game.check.state === "failed"
+                          ? "did not pass"
+                          : "skipped"}
+                  </h3>
+                  <p>
+                    {game.check.state === "pending"
+                      ? "The store is opening the game to see that it starts. It shows on the shelves once it passes, usually within a few minutes."
+                      : game.check.note}
+                    {game.check.state === "failed" && " The game is not on the shelves, but its page still opens with the link."}
+                  </p>
+                </div>
+                {game.check.state !== "pending" && (
+                  <div className="actions">
+                    <form action={`/api/games/${game.slug}/check`} method="post">
+                      <input type="hidden" name="action" value="again" />
+                      <button type="submit" className="button">
+                        Check again
+                      </button>
+                    </form>
+                    {game.check.state === "failed" && (
+                      <form action={`/api/games/${game.slug}/check`} method="post">
+                        <input type="hidden" name="action" value="list" />
+                        <button type="submit" className="button">
+                          List it anyway
+                        </button>
+                      </form>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="manage-row">
               <p>

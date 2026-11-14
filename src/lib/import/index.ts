@@ -49,6 +49,8 @@ async function publish(
   const updated = addVersion(game, version);
   // A fresh copy of ours replaces playing from the creator's site.
   delete updated.externalUrl;
+  // Every new build waits for the start-up check before the store lists it.
+  updated.check = { state: "pending", at: new Date().toISOString() };
   await deps.repo.save(updated);
   // Last, so the play domain only ever points at a build that is fully stored and recorded.
   await deps.live?.publish(updated);
@@ -193,7 +195,7 @@ export async function linkGame(deps: Deps, title: string, url: string, options?:
     createdAt: new Date().toISOString(),
     ...(owner ? { creatorId: owner.id } : {}),
   };
-  const updated: Game = { ...game, externalUrl: target.toString() };
+  const updated: Game = { ...game, externalUrl: target.toString(), check: { state: "pending", at: new Date().toISOString() } };
   await deps.repo.save(updated);
   return autofill(deps, updated, html, target.toString(), options);
 }

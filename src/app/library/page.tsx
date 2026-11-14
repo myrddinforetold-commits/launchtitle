@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Library" };
 
 const STATE_LABEL: Record<string, string | undefined> = { PAUSED: "PAUSED", REMOVED: "REMOVED" };
+const CHECK_LABEL: Record<string, string | undefined> = { pending: "CHECKING", failed: "NEEDS A LOOK" };
 
 export default async function Library() {
   const user = await currentUser();
@@ -79,7 +80,7 @@ export default async function Library() {
               <h2>Games you added</h2>
               <div className="cards">
                 {mine.map((game) => (
-                  <GameCard key={game.slug} game={game} badge={STATE_LABEL[game.state]} />
+                  <GameCard key={game.slug} game={game} badge={STATE_LABEL[game.state] ?? CHECK_LABEL[game.check?.state ?? ""]} />
                 ))}
               </div>
             </section>
