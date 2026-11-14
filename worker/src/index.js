@@ -3,7 +3,8 @@
 // Each game answers on its own subdomain, {slug}.launchtitle.games, so one game
 // cannot read another's storage and none can read the store's. This program
 // serves a game's files and does nothing else: no API, no session, no cookies,
-// read-only methods. It reads the bucket and nothing else.
+// read-only methods. It reads the bucket. The one thing it writes is a file a
+// copied game asked for that its copy lacked, fetched once from the game's own site.
 //
 // Keep it dependency-free: this file is deployed exactly as written.
 
@@ -16,7 +17,18 @@ const PLAY_HOST = "launchtitle.games";
 // The only sites allowed to show a game in a frame.
 const FRAME_ANCESTORS = "https://launchtitle.gg https://www.launchtitle.gg https://launchtitle.vercel.app";
 
-// request: a Request. env: { BUCKET, PLAY_HOST?, FRAME_ANCESTORS? }, where BUCKET is the R2 bucket.
+// A copied game may ask for a file its copy lacks. Up to this size it is fetched from the game's site and kept.
+const MAX_PULL_BYTES = 60 * 1024 * 1024;
+const TYPES = {
+  html: "text/html; charset=utf-8", htm: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8",
+  mjs: "text/javascript; charset=utf-8", css: "text/css; charset=utf-8", json: "application/json", map: "application/json",
+  txt: "text/plain; charset=utf-8", wasm: "application/wasm", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
+  gif: "image/gif", webp: "image/webp", avif: "image/avif", svg: "image/svg+xml", ico: "image/x-icon", mp3: "audio/mpeg",
+  ogg: "audio/ogg", wav: "audio/wav", m4a: "audio/mp4", mp4: "video/mp4", webm: "video/webm", woff: "font/woff",
+  woff2: "font/woff2", ttf: "font/ttf", otf: "font/otf", glb: "model/gltf-binary", gltf: "model/gltf+json",
+};
+
+// request: a Request. env: { BUCKET, PLAY_HOST?, FRAME_ANCESTORS?, FETCH? }, where BUCKET is the R2 bucket.
 export async function handle(request, env) {
   const base = {
     // Only the store may put a game in a frame.
@@ -58,21 +70,28 @@ export async function handle(request, env) {
   }
 
   const entry = Object.hasOwn(game.files ?? {}, name) ? game.files[name] : undefined;
-  if (!entry || !HASH.test(entry.hash)) return text(404, "Not found");
-
-  const etag = `"${entry.hash}"`;
-  const headers = {
+  let key;
+  let headers = {
     ...base,
-    "content-type": entry.type,
-    etag,
     // The same address serves whichever build is live, so browsers must check back each time.
     "cache-control": "no-cache",
     // Phones ask for sound and video a piece at a time, and refuse to play them from a server that cannot answer that.
     "accept-ranges": "bytes",
   };
-  if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
+  if (entry && HASH.test(entry.hash)) {
+    const etag = `"${entry.hash}"`;
+    headers = { ...headers, "content-type": entry.type, etag };
+    if (request.headers.get("if-none-match") === etag) return new Response(null, { status: 304, headers });
+    key = `blobs/${entry.hash.slice(0, 2)}/${entry.hash}`;
+  } else {
+    // Not in the copy. If the game was copied from a site, the file may simply have been
+    // missed: games often build file names as they run. Fetch it from there once and keep it.
+    key = await pulled(env, game, slug, name);
+    if (!key) return text(404, "Not found");
+    const ext = name.slice(name.lastIndexOf(".") + 1).toLowerCase();
+    headers = { ...headers, "content-type": TYPES[ext] || "application/octet-stream" };
+  }
 
-  const key = `blobs/${entry.hash.slice(0, 2)}/${entry.hash}`;
   if (head) {
     const found = await env.BUCKET.head(key);
     if (!found) return text(404, "Not found");
@@ -98,6 +117,40 @@ export async function handle(request, env) {
   const file = await env.BUCKET.get(key);
   if (!file) return text(404, "Not found");
   return new Response(file.body, { status: 200, headers: { ...headers, "content-length": String(file.size) } });
+}
+
+// Where a missed file is kept once fetched, or null if there is none to be had.
+// Only files under the folder the game was copied from are fetched, and only from that same site.
+async function pulled(env, game, slug, name) {
+  if (typeof game.source !== "string" || !game.source.startsWith("https://") || !game.version || name.length > 300) return null;
+  const key = `pulled/${slug}/${game.version}/${name}`;
+  if (await env.BUCKET.head(key)) return key;
+
+  let target;
+  try {
+    target = new URL(name.split("/").map(encodeURIComponent).join("/"), game.source);
+  } catch {
+    return null;
+  }
+  if (!target.href.startsWith(game.source)) return null;
+  let response;
+  try {
+    response = await (env.FETCH || fetch)(target.href, { redirect: "follow" });
+  } catch {
+    return null;
+  }
+  if (!response.ok) return null;
+  // A redirect must not carry us to another site.
+  if (response.url && new URL(response.url).origin !== target.origin) return null;
+  // Many sites answer any unknown address with their front page. That is not the file.
+  const ext = name.slice(name.lastIndexOf(".") + 1).toLowerCase();
+  const isPage = (response.headers.get("content-type") || "").includes("text/html");
+  if (isPage && ext !== "html" && ext !== "htm") return null;
+  if (Number(response.headers.get("content-length") || 0) > MAX_PULL_BYTES) return null;
+  const bytes = await response.arrayBuffer();
+  if (bytes.byteLength > MAX_PULL_BYTES) return null;
+  await env.BUCKET.put(key, bytes);
+  return key;
 }
 
 // Reads "bytes=0-99", "bytes=100-" or "bytes=-50" against a file of the given size.

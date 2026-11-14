@@ -11,6 +11,11 @@ export type LiveRecord = {
   version: string | null;
   /** Path -> where the file is and how to serve it. */
   files: Record<string, { hash: string; type: string; size: number }>;
+  /**
+   * For a game copied from its creator's site: the folder it was copied from.
+   * A file the game asks for that the copy lacks is fetched from here once, then kept.
+   */
+  source?: string;
 };
 
 export interface LiveIndex {
@@ -26,7 +31,26 @@ export function liveKey(slug: string): string {
 
 export function liveRecord(game: Game): LiveRecord {
   const version = activeVersion(game);
-  return { slug: game.slug, state: game.state, version: version?.id ?? null, files: version?.manifest ?? {} };
+  const source = version?.source.kind === "crawl" ? sourceFolder(version.source.url) : null;
+  return {
+    slug: game.slug,
+    state: game.state,
+    version: version?.id ?? null,
+    files: version?.manifest ?? {},
+    ...(source ? { source } : {}),
+  };
+}
+
+/** The folder a game's page lives in, ending in a slash. Only public https sites qualify. */
+export function sourceFolder(page: string): string | null {
+  try {
+    const url = new URL(page);
+    if (url.protocol !== "https:") return null;
+    const last = url.pathname.slice(url.pathname.lastIndexOf("/") + 1);
+    return new URL(last.includes(".") ? "./" : url.pathname.replace(/\/?$/, "/"), url).href;
+  } catch {
+    return null;
+  }
 }
 
 /** For local development, where the play server reads the game store directly. */

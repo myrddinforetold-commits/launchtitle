@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { addVersion, buildVersion, type Game } from "@/lib/games";
-import { liveKey, liveRecord } from "@/lib/live";
+import { addVersion, buildVersion, type Game, type Version } from "@/lib/games";
+import { liveKey, liveRecord, sourceFolder } from "@/lib/live";
 import { blobKey } from "@/lib/r2";
 import { MemoryBlobStore, sha256 } from "@/lib/storage";
 
@@ -24,6 +24,9 @@ function fakeBucket() {
       const bytes = objects.get(key);
       return bytes ? { size: bytes.byteLength } : null;
     },
+    async put(key: string, bytes: ArrayBuffer) {
+      objects.set(key, new Uint8Array(bytes));
+    },
   };
 }
 
@@ -33,17 +36,17 @@ const FILES = new Map([
 ]);
 
 /** Publish a game the way the app does, into a bucket the Worker then reads. */
-async function setup(state: Game["state"] = "HOSTED") {
+async function setup(state: Game["state"] = "HOSTED", source: Version["source"] = { kind: "zip" }, FETCH?: typeof fetch) {
   const bucket = fakeBucket();
   const store = new MemoryBlobStore();
-  const version = await buildVersion(store, FILES, { kind: "zip" });
+  const version = await buildVersion(store, FILES, source);
   const game = addVersion(
     { slug: "lantern-bay", title: "Lantern Bay", state, versions: [], activeVersionId: null, createdAt: "" },
     version,
   );
   for (const bytes of FILES.values()) bucket.objects.set(blobKey(sha256(bytes)), bytes);
   bucket.objects.set(liveKey(game.slug), enc(JSON.stringify(liveRecord(game))));
-  const env = { BUCKET: bucket, PLAY_HOST: "launchtitle.games", FRAME_ANCESTORS: "https://launchtitle.gg" };
+  const env = { BUCKET: bucket, PLAY_HOST: "launchtitle.games", FRAME_ANCESTORS: "https://launchtitle.gg", FETCH };
   const ask = (url: string, init?: RequestInit) => handle(new Request(url, init), env);
   return { bucket, ask };
 }
@@ -157,5 +160,69 @@ describe("play domain worker", () => {
     const odd = await ask(url, { headers: { range: "bytes=0-1,4-5" } });
     expect(odd.status).toBe(200);
     expect(await odd.text()).toBe(whole);
+  });
+
+  describe("a file the copy lacks", () => {
+    const SITE = "https://macaw.example/play/";
+    /** The creator's site: one model, a front page for anything else, and a redirect off-site. */
+    function origin() {
+      const asked: string[] = [];
+      const fetchImpl = (async (input: RequestInfo | URL) => {
+        const url = String(input);
+        asked.push(url);
+        const respond = (body: string, type: string, at = url) => {
+          const res = new Response(body, { status: 200, headers: { "content-type": type } });
+          Object.defineProperty(res, "url", { value: at });
+          return res;
+        };
+        if (url === `${SITE}models/tree-palm.glb`) return respond("palm", "model/gltf-binary");
+        if (url === `${SITE}moved.png`) return respond("elsewhere", "image/png", "https://other.example/moved.png");
+        if (url === `${SITE}gone.png`) return new Response("no", { status: 404 });
+        return respond("<html>front page</html>", "text/html");
+      }) as typeof fetch;
+      return { fetchImpl, asked };
+    }
+
+    it("is fetched from the game's own site once, then served from storage", async () => {
+      const { fetchImpl, asked } = origin();
+      const { ask, bucket } = await setup("HOSTED", { kind: "crawl", url: SITE }, fetchImpl);
+      const url = "https://lantern-bay.launchtitle.games/models/tree-palm.glb";
+
+      const first = await ask(url);
+      expect(first.status).toBe(200);
+      expect(first.headers.get("content-type")).toBe("model/gltf-binary");
+      expect(first.headers.get("content-security-policy")).toBe("frame-ancestors https://launchtitle.gg");
+      expect(await first.text()).toBe("palm");
+      expect([...bucket.objects.keys()].some((key) => key.startsWith("pulled/lantern-bay/") && key.endsWith("/models/tree-palm.glb"))).toBe(true);
+
+      const again = await ask(url, { headers: { range: "bytes=0-1" } });
+      expect(again.status).toBe(206);
+      expect(await again.text()).toBe("pa");
+      expect(asked).toEqual([`${SITE}models/tree-palm.glb`]);
+    });
+
+    it("is not found when the site lacks it, answers with its front page, or sends us elsewhere", async () => {
+      const { fetchImpl } = origin();
+      const { ask, bucket } = await setup("HOSTED", { kind: "crawl", url: SITE }, fetchImpl);
+      for (const path of ["/gone.png", "/models/unknown.glb", "/moved.png"]) {
+        expect((await ask(`https://lantern-bay.launchtitle.games${path}`)).status, path).toBe(404);
+      }
+      expect([...bucket.objects.keys()].filter((key) => key.startsWith("pulled/"))).toEqual([]);
+    });
+
+    it("is never fetched for a game that was uploaded, which is already whole", async () => {
+      const { fetchImpl, asked } = origin();
+      const { ask } = await setup("HOSTED", { kind: "zip" }, fetchImpl);
+      expect((await ask("https://lantern-bay.launchtitle.games/models/tree-palm.glb")).status).toBe(404);
+      expect(asked).toEqual([]);
+    });
+
+    it("knows the folder a game was copied from", () => {
+      expect(sourceFolder("https://macaw.example/")).toBe("https://macaw.example/");
+      expect(sourceFolder("https://macaw.example/play")).toBe("https://macaw.example/play/");
+      expect(sourceFolder("https://macaw.example/play/index.html")).toBe("https://macaw.example/play/");
+      expect(sourceFolder("http://macaw.example/")).toBeNull();
+      expect(sourceFolder("nonsense")).toBeNull();
+    });
   });
 });
