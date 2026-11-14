@@ -3,11 +3,12 @@ import { notFound } from "next/navigation";
 
 import Link from "next/link";
 
-import { accounts, currentUser } from "@/lib/auth/current";
+import { accounts, currentUser, sponsors } from "@/lib/auth/current";
 import { BotStore } from "@/lib/bot/store";
 import { titleGuess } from "@/lib/bot/parse";
 import { getConfig } from "@/lib/config";
 import { connect } from "@/lib/db/sql";
+import { PLACEMENT_LABEL, PLACEMENTS } from "@/lib/sponsors";
 import { openStores } from "@/lib/stores";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,7 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
   const nominations = (await botStore?.recent(60)) ?? [];
   const sentToday = bot && botStore ? await botStore.repliesSentSince(new Date(Date.now() - 24 * 60 * 60 * 1000)) : 0;
   const lastCheck = bot && bot.pollStartedAt.getTime() > 0 ? bot.pollStartedAt.toISOString().slice(0, 16).replace("T", " ") + " UTC" : "never";
+  const spots = (await (await sponsors())?.all().catch(() => [])) ?? [];
   const guess = (url: string) => {
     try {
       return titleGuess(url);
@@ -175,6 +177,94 @@ export default async function Admin({ searchParams }: { searchParams: Promise<{ 
           ))}
         </tbody>
       </table>
+
+      <h2 id="sponsors">Sponsor spots</h2>
+      <p className="lede">
+        Three quiet places, each labelled Sponsored: a band on the home page, a card beside a game&apos;s details, and a
+        &ldquo;Presented by&rdquo; line on the launch screen. Nothing is ever shown over a game. With several switched on
+        in one place, each visit shows one at random.
+      </p>
+      {spots.length > 0 && (
+        <table>
+          <thead>
+            <tr>
+              <th>Sponsor</th>
+              <th>Where</th>
+              <th>Clicks</th>
+              <th>Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            {spots.map((spot) => (
+              <tr key={spot.id}>
+                <td>
+                  <b>{spot.name}</b>
+                  <br />
+                  {spot.headline}
+                  <br />
+                  <small>{spot.url}</small>
+                </td>
+                <td>
+                  {PLACEMENT_LABEL[spot.placement]}
+                  <br />
+                  <small>{spot.active ? "Showing" : "Switched off"}</small>
+                </td>
+                <td>{spot.clicks}</td>
+                <td>
+                  <form action="/api/admin/sponsors" method="post">
+                    <input type="hidden" name="id" value={spot.id} />
+                    <button type="submit" name="action" value={spot.active ? "off" : "on"}>
+                      {spot.active ? "Switch off" : "Switch on"}
+                    </button>{" "}
+                    <button type="submit" name="action" value="remove">
+                      Remove
+                    </button>
+                  </form>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+      <form className="submit sponsor-form" action="/api/admin/sponsors" method="post" encType="multipart/form-data">
+        <label>
+          Where it shows
+          <select name="placement" defaultValue="home">
+            {PLACEMENTS.map((placement) => (
+              <option key={placement} value={placement}>
+                {PLACEMENT_LABEL[placement]}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Sponsor
+          <small>Shown beside the word Sponsored, or after &ldquo;Presented by&rdquo;.</small>
+          <input name="name" maxLength={40} required />
+        </label>
+        <label>
+          Headline
+          <small>Up to 70 characters. Not used on the launch screen.</small>
+          <input name="headline" maxLength={70} />
+        </label>
+        <label>
+          One line of detail
+          <small>Optional, up to 160 characters.</small>
+          <input name="body" maxLength={160} />
+        </label>
+        <label>
+          Link
+          <input name="url" type="url" placeholder="https://" required />
+        </label>
+        <label>
+          Image
+          <small>Optional. Square works best. PNG, JPEG or WebP, up to 4 MB.</small>
+          <input name="image" type="file" accept="image/png,image/jpeg,image/webp" />
+        </label>
+        <button type="submit" className="button">
+          Add sponsor spot
+        </button>
+      </form>
 
       <h2>People</h2>
       <p className="lede">

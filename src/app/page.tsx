@@ -1,7 +1,8 @@
 import Link from "next/link";
 
 import { GameCard } from "@/components/GameCard";
-import { accounts, currentUser, plays, xApp } from "@/lib/auth/current";
+import { SponsorSpot } from "@/components/SponsorSpot";
+import { accounts, currentUser, plays, sponsorFor, xApp } from "@/lib/auth/current";
 import { isListed, type Game } from "@/lib/games";
 import { playsLabel, type PlayStats } from "@/lib/plays";
 import { openStores } from "@/lib/stores";
@@ -35,6 +36,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
   const WEEK = 7 * 24 * 60 * 60 * 1000;
   const fresh = games.filter((game) => Date.now() - Date.parse(game.createdAt) < WEEK);
   const shelves = games.length >= 6;
+  const sponsor = await sponsorFor("home");
 
   return (
     <>
@@ -145,6 +147,8 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ s
           )}
         </div>
       </section>
+
+      <SponsorSpot sponsor={sponsor} shape="wide" />
 
       {shelves && mostPlayed.length >= 3 && (
         <section className="shelf">

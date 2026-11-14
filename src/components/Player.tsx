@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-type Props = { slug: string; title: string; src: string; sandbox: string; allow: string; portrait?: boolean; cover?: string };
+type Props = { slug: string; title: string; src: string; sandbox: string; allow: string; portrait?: boolean; cover?: string; presentedBy?: string };
 
 /** How often a running game reports its time. */
 const REPORT_EVERY_MS = 30_000;
@@ -17,7 +17,7 @@ const LAUNCH_MAX_MS = 12_000;
  * slim bar above it, like switching to a game on a console. Nothing loads
  * from the game until Play is pressed.
  */
-export function Player({ slug, title, src, sandbox, allow, portrait = false, cover }: Props) {
+export function Player({ slug, title, src, sandbox, allow, portrait = false, cover, presentedBy }: Props) {
   const [open, setOpen] = useState(false);
   const [launching, setLaunching] = useState(true);
   const screen = useRef<HTMLDivElement>(null);
@@ -139,6 +139,7 @@ export function Player({ slug, title, src, sandbox, allow, portrait = false, cov
                   <strong>{title}</strong>
                   <span className="launch-bar" />
                   <small role="status">{launching ? "Launching" : ""}</small>
+                  {presentedBy && <small className="presented">Presented by {presentedBy}</small>}
                 </div>
               </div>
             </div>

@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 
 import { GameCard } from "@/components/GameCard";
 import { Player } from "@/components/Player";
-import { accounts, currentUser, plays, xApp } from "@/lib/auth/current";
+import { SponsorSpot } from "@/components/SponsorSpot";
+import { accounts, currentUser, plays, sponsorFor, xApp } from "@/lib/auth/current";
 import { GAME_FRAME_ALLOW, GAME_FRAME_SANDBOX, LINKED_FRAME_SANDBOX, playUrl } from "@/lib/frame";
 import { activeVersion, isListed, isPlayable, SERVED_STATES } from "@/lib/games";
 import { canManage, MAX_DESCRIPTION, MAX_HOW_TO, MAX_SCREENSHOTS, mayMove } from "@/lib/manage";
@@ -54,6 +55,7 @@ export default async function GamePage({ params, searchParams }: Props) {
   const stats = (await store?.stats().catch(() => null))?.get(game.slug);
   const saved = user && store ? (await store.savedFor(user.id).catch(() => [] as string[])).includes(game.slug) : false;
   const minutes = stats ? Math.round(stats.seconds / 60) : 0;
+  const [sponsor, presenter] = await Promise.all([sponsorFor("game"), sponsorFor("launch")]);
 
   return (
     <>
@@ -102,6 +104,7 @@ export default async function GamePage({ params, searchParams }: Props) {
                 portrait={game.display === "portrait"}
                 slug={game.slug}
                 cover={cover ?? undefined}
+                presentedBy={presenter?.name}
               />
             ) : (
               <p className="notice">This game is not playable right now. Only you and the Launch Title team can see this page.</p>
@@ -145,6 +148,7 @@ export default async function GamePage({ params, searchParams }: Props) {
               )}
             </div>
           )}
+          <div className="about-side">
           <aside className="panel info">
             <dl>
               <div>
@@ -172,6 +176,8 @@ export default async function GamePage({ params, searchParams }: Props) {
               </Link>
             )}
           </aside>
+          <SponsorSpot sponsor={sponsor} shape="side" />
+          </div>
         </section>
 
         {manages && user && (
