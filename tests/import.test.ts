@@ -149,6 +149,20 @@ describe("crawl import", () => {
     expect(result.externalDomains).toEqual(["cdn.other.example"]);
   });
 
+  it("follows paths written with a folder prefix, as built games do", async () => {
+    const { fetchImpl } = fakeSite({
+      "https://games.example/bird/": { body: `<script src="assets/app.js"></script>` },
+      "https://games.example/bird/assets/app.js": {
+        body: "const B='./';load(`${B}models/macaw-fly.glb`);load(`${B}media/sky.webp`);load(`${B}models/${name}.glb`)",
+        type: "text/javascript",
+      },
+      "https://games.example/bird/models/macaw-fly.glb": { body: "glb", type: "model/gltf-binary" },
+      "https://games.example/bird/media/sky.webp": { body: "webp", type: "image/webp" },
+    });
+    const result = await crawlSite("https://games.example/bird/", { fetchImpl });
+    expect(result.files.map(([name]) => name).sort()).toEqual(["assets/app.js", "index.html", "media/sky.webp", "models/macaw-fly.glb"]);
+  });
+
   it("refuses private addresses and cross-site redirects", async () => {
     for (const host of ["localhost", "127.0.0.1", "10.1.2.3", "192.168.0.5", "169.254.169.254", "172.20.0.1", "[::1]", "db.internal"]) {
       expect(isPrivateHost(host.replace(/^\[|\]$/g, "")), host).toBe(true);

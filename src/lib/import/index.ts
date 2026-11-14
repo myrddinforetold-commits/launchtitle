@@ -5,7 +5,7 @@ import { sniffImage } from "../images";
 import type { BlobStore } from "../storage";
 import { getConfig } from "../config";
 import { crawlSite, isPrivateHost, type CrawlOptions } from "./crawl";
-import { serverSigns } from "./detect";
+import { copyGaps, serverSigns } from "./detect";
 import { fetchCover, framingBlocked, pageMeta } from "./meta";
 import { filesFromZip } from "./zip";
 
@@ -110,14 +110,15 @@ export type AutoResult = { game: Game; how: "copy" | "link"; note: string };
 
 /**
  * Bring a game in by link, choosing the way that suits it. The game's files
- * are fetched once. If its code shows it needs a server, it is linked to play
- * from its creator's site; otherwise the files are copied and hosted here.
- * A game that needs a server but whose site refuses to be framed is copied
+ * are fetched once. If its code shows it needs a server, or loads files a copy
+ * would miss, it is linked to play from its creator's site; otherwise the files
+ * are copied and hosted here. Such a game whose site refuses to be framed is copied
  * anyway, with a note, so a person can sort it out.
  */
 export async function importAuto(deps: Deps, title: string, url: string, options?: CrawlOptions, owner?: Owner): Promise<AutoResult> {
   const { files, externalDomains } = await crawlSite(url, options);
-  const signs = serverSigns(files);
+  // Either kind of sign means a copy would not play properly: it needs a server, or files the copier could not see.
+  const signs = [...serverSigns(files), ...copyGaps(files)];
 
   if (signs.length > 0) {
     try {

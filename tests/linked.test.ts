@@ -7,7 +7,7 @@ import { migrate } from "@/lib/db/migrate";
 import type { Sql } from "@/lib/db/sql";
 import { isPlayable } from "@/lib/games";
 import { ImportError, importAuto, importHtml, linkGame } from "@/lib/import";
-import { serverSigns } from "@/lib/import/detect";
+import { copyGaps, serverSigns } from "@/lib/import/detect";
 import { framingBlocked, pageMeta } from "@/lib/import/meta";
 import { MemoryBlobStore } from "@/lib/storage";
 
@@ -168,6 +168,15 @@ describe("telling whether a game needs a server", () => {
     expect(serverSigns([file("a.js", 'await fetch("/api/score", { method: "POST" })')])).toEqual(["calls its own server"]);
   });
 
+  it("spots a game that builds file names as it runs, which a copy would miss", () => {
+    const gap = ["builds the names of its files as it runs, so a copy would be missing some"];
+    expect(copyGaps([file("a.js", "load(`${base}models/${name}.glb`)")])).toEqual(gap);
+    expect(copyGaps([file("a.js", "tex(`media/imp-${tree.model}.webp`)")])).toEqual(gap);
+    // A folder prefix alone is fine: the copier follows it. So are plain paths and ordinary template text.
+    expect(copyGaps([file("a.js", "load(`${base}models/bird.glb`); load('media/sky.webp'); log(`score ${n} of ${max}`)")])).toEqual([]);
+    expect(copyGaps([file("art.png", "`models/${name}.glb`")])).toEqual([]);
+  });
+
   it("only reads code, not art or data", () => {
     expect(serverSigns([file("notes.txt", "new WebSocket("), file("sprite.png", "socket.io")])).toEqual([]);
   });
@@ -211,6 +220,13 @@ describe("approving a game without choosing how", () => {
     expect(result.how).toBe("link");
     expect(result.note).toBe("Linked: the game opens a live connection to a server.");
     expect(result.game).toMatchObject({ externalUrl: "https://finders.example/", versions: [] });
+  });
+
+  it("links a game that loads files a copy would miss", async () => {
+    const result = await importAuto({ repo, store }, "Macaw", "https://macaw.example/", { fetchImpl: gameSite("load(`${base}models/${name}.glb`)") }, maker);
+    expect(result.how).toBe("link");
+    expect(result.note).toBe("Linked: the game builds the names of its files as it runs, so a copy would be missing some.");
+    expect(result.game).toMatchObject({ externalUrl: "https://macaw.example/", versions: [] });
   });
 
   it("copies with a warning when a server game's site refuses to be shown here", async () => {
