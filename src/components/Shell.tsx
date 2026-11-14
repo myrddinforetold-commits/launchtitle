@@ -70,6 +70,8 @@ export function Shell({ user, canSignIn, canSubmit, children }: Props) {
         ? [{ href: "/library", label: "Your games" }]
         : [
             { href: "/creators", label: "How it works" },
+            { href: "/creators#royalties", label: "Royalties" },
+            { href: "/creators#questions", label: "Questions" },
             ...(canSubmit ? [{ href: "/submit", label: "Add a game" }] : []),
             ...(user?.role === "admin" ? [{ href: "/admin", label: "Requests and people" }] : []),
           ];

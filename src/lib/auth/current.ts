@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { getConfig } from "../config";
 import { connect } from "../db/sql";
 import { Plays } from "../plays";
+import { Sponsors, type Placement, type Sponsor } from "../sponsors";
 import { Accounts, type User } from "./sessions";
 import type { XApp } from "./x";
 
@@ -26,6 +27,21 @@ export async function accounts(): Promise<Accounts | null> {
 export async function plays(): Promise<Plays | null> {
   const { databaseUrl } = getConfig();
   return databaseUrl ? new Plays(await connect(databaseUrl)) : null;
+}
+
+/** Sponsor spots need the database. Without it there are none. */
+export async function sponsors(): Promise<Sponsors | null> {
+  const { databaseUrl } = getConfig();
+  return databaseUrl ? new Sponsors(await connect(databaseUrl)) : null;
+}
+
+/** The sponsor to show in a place, if any. A fault here must never break the page around it. */
+export async function sponsorFor(placement: Placement): Promise<Sponsor | null> {
+  try {
+    return (await (await sponsors())?.pick(placement)) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /** The signed-in person, or null. A failure to reach the database reads as signed out rather than breaking the page. */
