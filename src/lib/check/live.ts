@@ -6,6 +6,6 @@ import type { CheckDeps } from "./run";
 
 /** The check wired to the real stores and a real hidden browser. */
 export function liveCheckDeps(): CheckDeps {
-  const { repo, store } = openStores();
-  return { repo, store, check: bootCheck, playAddress: (game: Game) => game.externalUrl ?? playUrl(game.slug) };
+  const { repo, store, live } = openStores();
+  return { repo, store, live, check: bootCheck, playAddress: (game: Game) => game.externalUrl ?? playUrl(game.slug) };
 }
