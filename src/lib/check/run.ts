@@ -1,18 +1,23 @@
 import { isPlayable, type Game, type GameRepo } from "../games";
+import type { LiveIndex } from "../live";
 import type { BlobStore } from "../storage";
 import type { Checker } from "./browser";
 
 export type CheckDeps = {
   repo: GameRepo;
   store: BlobStore;
+  /** When given, the play domain is told about the game afresh before it is checked. */
+  live?: LiveIndex;
   check: Checker;
   /** Where a game plays from: its own site, or its address on the play domain. */
   playAddress(game: Game): string;
   now?: () => Date;
 };
 
-/** The longest one check may take before it is abandoned. */
-const CHECK_TIMEOUT_MS = 75_000;
+/** The longest one check may take before it is abandoned. The check keeps its own, shorter budget. */
+const CHECK_TIMEOUT_MS = 90_000;
+/** A check that began this recently is still running somewhere. Do not start a second one. */
+const CLAIM_MS = 3 * 60 * 1000;
 export const MAX_AUTO_SHOTS = 3;
 
 function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
@@ -27,6 +32,10 @@ function withTimeout<T>(work: Promise<T>, ms: number): Promise<T> {
  */
 export async function checkGame(deps: CheckDeps, game: Game): Promise<Game> {
   const at = (deps.now?.() ?? new Date()).toISOString();
+  // Say so before starting, so a second run arriving meanwhile leaves this game alone.
+  await deps.repo.save({ ...game, check: { state: "pending", at: game.check?.at ?? at, note: `checking since ${at}` } });
+  // Make sure the play domain has the game's current record, including where a copy may fetch missed files from.
+  await deps.live?.publish(game).catch(() => {});
   let updated: Game;
   try {
     const result = await withTimeout(deps.check(deps.playAddress(game), { phone: game.display === "portrait" || game.devices === "phone" }), CHECK_TIMEOUT_MS);
@@ -48,10 +57,17 @@ export async function checkGame(deps: CheckDeps, game: Game): Promise<Game> {
 
 export type ChecksReport = { checked: number; passed: number; failed: number; skipped: number };
 
-/** Checks games that are waiting, oldest first. A few at a time: each one takes a while. */
-export async function runChecks(deps: CheckDeps, limit = 2): Promise<ChecksReport> {
+/** Is a check of this game already under way? */
+function claimed(game: Game, now: number): boolean {
+  const since = /^checking since (.+)$/.exec(game.check?.note ?? "")?.[1];
+  return Boolean(since) && now - Date.parse(since!) < CLAIM_MS;
+}
+
+/** Checks games that are waiting, oldest first. One at a time by default: each takes a while and a whole browser. */
+export async function runChecks(deps: CheckDeps, limit = 1): Promise<ChecksReport> {
+  const now = (deps.now?.() ?? new Date()).getTime();
   const waiting = (await deps.repo.list())
-    .filter((game) => game.check?.state === "pending" && isPlayable(game))
+    .filter((game) => game.check?.state === "pending" && isPlayable(game) && !claimed(game, now))
     .sort((a, b) => (a.check?.at ?? "").localeCompare(b.check?.at ?? ""))
     .slice(0, limit);
   const report: ChecksReport = { checked: 0, passed: 0, failed: 0, skipped: 0 };

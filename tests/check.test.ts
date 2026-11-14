@@ -34,6 +34,11 @@ describe("deciding whether a game started", () => {
     expect(verdict({ ...fine, blank: [true, false, false] }).ok).toBe(true);
   });
 
+  it("passes a game too slow to picture, on its files alone", () => {
+    expect(verdict({ ...fine, blank: [] })).toEqual({ ok: true, note: "It loaded and found its files. It was too slow to picture in the test browser." });
+    expect(verdict({ ...fine, blank: [], missing: ["a.glb", "b.glb", "c.glb"] }).ok).toBe(false);
+  });
+
   it("does not count files browsers ask for on their own", () => {
     for (const path of ["favicon.ico", "assets/app.js.map", "apple-touch-icon.png", "manifest.json", "robots.txt"]) expect(isOptional(path), path).toBe(true);
     for (const path of ["models/rock.glb", "assets/app.js", "map.json"]) expect(isOptional(path), path).toBe(false);
@@ -122,6 +127,16 @@ describe("checking games", () => {
     ]);
     expect(await runChecks(deps, 2)).toMatchObject({ checked: 1 });
     expect(await runChecks(deps, 2)).toMatchObject({ checked: 0 });
+  });
+
+  it("leaves alone a game another run is already checking", async () => {
+    const ok = { ok: true, note: "ok", shots: [] };
+    const { repo, deps, asked } = await setup({ busy: ok, free: ok });
+    await repo.save(game("busy", { check: { state: "pending", at, note: "checking since 2026-11-14T02:04:00.000Z" } }));
+    await repo.save(game("stuck", { externalUrl: "https://free.example/", check: { state: "pending", at, note: "checking since 2026-11-14T01:00:00.000Z" } }));
+    expect(await runChecks(deps, 5)).toMatchObject({ checked: 1, passed: 1 });
+    expect(asked.map((a) => a.url)).toEqual(["https://free.example/"]);
+    expect((await repo.get("busy"))!.check?.state).toBe("pending");
   });
 
   it("hides a waiting game, but not for ever", () => {
