@@ -86,13 +86,18 @@ export async function runBot(deps: RunDeps): Promise<RunReport> {
   const allowance = Math.max(0, deps.dailyReplies - (await store.repliesSentSince(new Date(now().getTime() - DAY))));
   for (const reply of await store.queuedReplies(Math.min(10, allowance))) {
     try {
-      await store.markReply(reply.id, await deps.x.reply(bot.accessToken, reply.inReplyTo, reply.body), now());
+      const posted = await deps.x.reply(bot.accessToken, reply.inReplyTo, reply.body);
+      await store.markReply(reply.id, posted, now());
+      console.log(`bot: replied under ${reply.inReplyTo} as post ${posted}: ${reply.body.slice(0, 60)}`);
       report.replies += 1;
     } catch (error) {
       console.error("bot: a reply failed:", error instanceof Error ? error.message : error);
       await store.markReply(reply.id, null, now());
     }
   }
+
+  const waiting = (await store.queuedReplies(50)).length;
+  if (waiting > 0) console.log(`bot: ${waiting} replies still waiting; ${Math.max(0, allowance - report.replies)} of today's ${deps.dailyReplies} left`);
 
   // 4. Requests a creator never answered.
   report.expired = await store.expireOlderThan(new Date(now().getTime() - 7 * DAY));
