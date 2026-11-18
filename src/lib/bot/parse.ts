@@ -27,8 +27,18 @@ const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
  */
 export function parseCommand(mention: Mention, botHandle: string): Command {
   const bot = escape(botHandle);
-  const add = new RegExp(`@${bot}\\s+add\\b(?:\\s+@(\\w{1,15}))?`, "i").exec(mention.text);
-  if (add) {
+  // Words in quotes are someone talking about the command, not giving it:
+  // 'reply "@bot add" under your post' is advice to somebody else.
+  const text = mention.text.replace(/"[^"\n]*"|\u201c[^\u201d\n]*\u201d|`[^`\n]*`/g, " ");
+  // A command opens the post (after the handles a reply starts with) or closes it
+  // (followed only by links and handles). In the middle of a sentence it is being described.
+  const given = (match: RegExpExecArray) => {
+    const before = text.slice(0, match.index);
+    const after = text.slice(match.index + match[0].length);
+    return /^(?:\s*@\w{1,15})*\s*$/.test(before) || /^(?:\s+(?:https?:\/\/\S+|@\w{1,15}))*\s*[.!]?\s*$/.test(after);
+  };
+  const add = new RegExp(`@${bot}\\s+add\\b(?:\\s+@(\\w{1,15}))?`, "i").exec(text);
+  if (add && given(add)) {
     const tagged = add[1];
     if (!tagged || tagged.toLowerCase() === botHandle.toLowerCase() || tagged.toLowerCase() === mention.authorHandle.toLowerCase()) {
       return { kind: "add" };
@@ -36,7 +46,8 @@ export function parseCommand(mention: Mention, botHandle: string): Command {
     const known = mention.mentions.find((m) => m.handle.toLowerCase() === tagged.toLowerCase());
     return { kind: "add", creator: { handle: known?.handle ?? tagged, id: known?.id } };
   }
-  if (new RegExp(`@${bot}\\s+remove\\b`, "i").test(mention.text)) return { kind: "remove" };
+  const remove = new RegExp(`@${bot}\\s+remove\\b`, "i").exec(text);
+  if (remove && given(remove)) return { kind: "remove" };
 
   // A reply starts with the handles it is replying to. What follows is the message.
   const said = mention.text.replace(/^(?:\s*@\w{1,15})+/, "").trim().toLowerCase().replace(/[.!]+$/, "");
@@ -45,9 +56,9 @@ export function parseCommand(mention: Mention, botHandle: string): Command {
   return { kind: "none" };
 }
 
-const NOT_A_GAME = /(^|\.)(x\.com|twitter\.com|t\.co|pic\.x\.com|pic\.twitter\.com)$/i;
+const NOT_A_GAME = /(^|\.)(x\.com|twitter\.com|t\.co|pic\.x\.com|pic\.twitter\.com|launchtitle\.gg|launchtitle\.games)$/i;
 
-/** The first link that could be a game: https, and not a link back into X. */
+/** The first link that could be a game: https, and not a link back into X or to Launch Title itself. */
 export function gameUrl(urls: readonly string[]): string | null {
   for (const raw of urls) {
     try {
