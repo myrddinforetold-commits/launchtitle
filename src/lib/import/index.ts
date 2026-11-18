@@ -118,7 +118,20 @@ export type AutoResult = { game: Game; how: "copy" | "link"; note: string };
  * anyway, with a note, so a person can sort it out.
  */
 export async function importAuto(deps: Deps, title: string, url: string, options?: CrawlOptions, owner?: Owner): Promise<AutoResult> {
-  const { files, externalDomains } = await crawlSite(url, options);
+  let crawled: Awaited<ReturnType<typeof crawlSite>>;
+  try {
+    crawled = await crawlSite(url, options);
+  } catch (error) {
+    // Too big to copy is no reason to turn a game away: play it from its own site if that site allows.
+    if (!(error instanceof ImportError) || (error.code !== "too_many_files" && error.code !== "too_large")) throw error;
+    try {
+      const game = await linkGame(deps, title, url, options, owner);
+      return { game, how: "link", note: `Linked: the game is too big to copy. ${error.message}` };
+    } catch {
+      throw error;
+    }
+  }
+  const { files, externalDomains } = crawled;
   // Either kind of sign means a copy would not play properly: it needs a server, or files the copier could not see.
   const signs = [...serverSigns(files), ...copyGaps(files)];
 

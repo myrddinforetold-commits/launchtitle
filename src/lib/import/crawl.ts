@@ -148,6 +148,11 @@ export async function crawlSite(entry: string, options: CrawlOptions = {}): Prom
       if (item.required) throw new ImportError("fetch_failed", `The game's page answered ${response.status}.`);
       continue;
     }
+    // Many sites answer any unknown address with their front page. A page that arrives
+    // where a script, picture or sound was asked for is not that file: keeping it would
+    // store junk, and following its links would send us round in circles.
+    const answeredWithPage = (response.headers.get("content-type") ?? "").includes("text/html");
+    if (answeredWithPage && !item.required && /\.[a-z0-9]{1,5}$/i.test(item.name) && !/\.html?$/i.test(item.name)) continue;
     const bytes = new Uint8Array(await response.arrayBuffer());
     total += bytes.byteLength;
     if (total > maxBytes) throw new ImportError("too_large", "The game is larger than 200 MB.");

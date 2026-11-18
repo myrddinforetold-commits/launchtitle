@@ -48,6 +48,29 @@ describe("reading a post", () => {
     expect(parseCommand(mention({ text: "@launchtitlegg add @fan", authorHandle: "Fan" }), BOT)).toEqual({ kind: "add" });
   });
 
+  it("ignores a post that only talks about the command", () => {
+    for (const text of [
+      'Great game. Reply "@launchtitlegg add" under your game\'s post and it\'s in. launchtitle.gg/creators',
+      "To add it, reply \u201c@launchtitlegg add\u201d under your game's post.",
+      "just reply @launchtitlegg add under your game's post and we host it",
+      "you can also tag @launchtitlegg add @maker if you want to nominate someone, it's easy",
+      'To take it down, say "@launchtitlegg remove".',
+      "if you ever want it gone, @launchtitlegg remove does that for you",
+    ]) {
+      expect(parseCommand(mention({ text }), BOT).kind, text).toBe("none");
+    }
+    // The real thing still works: at the start of a reply, or at the end of a post, with links and handles after it.
+    expect(parseCommand(mention({ text: "@maker @launchtitlegg add" }), BOT)).toEqual({ kind: "add" });
+    expect(parseCommand(mention({ text: "@launchtitlegg add https://maker.itch.io/saltline" }), BOT)).toEqual({ kind: "add" });
+    expect(parseCommand(mention({ text: "@launchtitlegg add please, this one is mine" }), BOT)).toEqual({ kind: "add" });
+    expect(parseCommand(mention({ text: "My new game is out! https://t.co/abc @launchtitlegg add." }), BOT)).toEqual({ kind: "add" });
+  });
+
+  it("never takes a link to Launch Title itself for a game", () => {
+    expect(gameUrl(["https://launchtitle.gg/creators", "https://www.launchtitle.gg/", "https://macaw.launchtitle.games/"])).toBeNull();
+    expect(gameUrl(["https://launchtitle.gg/creators", "https://maker.itch.io/saltline"])).toBe("https://maker.itch.io/saltline");
+  });
+
   it("leaves ordinary conversation alone", () => {
     for (const text of [
       "@launchtitlegg this is great",

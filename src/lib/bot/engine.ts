@@ -8,6 +8,7 @@ export const SAY = {
   declined: "Understood. We won't add it.",
   noLink: "I couldn't find a game link. Reply to the post that has the link, or include it with add.",
   already: "That one is already on Launch Title.",
+  pending: "That one has already been asked for. It's with the team for review.",
   optedOut: "The creator asked us not to add that one.",
   removed: "Done. It's off Launch Title.",
   /** Why a game could not be brought in, in terms the person who tagged it can act on. */
@@ -62,6 +63,8 @@ export async function handleMention(deps: EngineDeps, m: Mention): Promise<strin
 
     const optedOut = (await store.forUrl(url, ["DECLINED"])).length > 0;
     const live = (await store.forUrl(url, ["LIVE"])).length > 0;
+    // Someone already asked and it is waiting on us. One row to approve is enough.
+    const pending = !live && (await store.forUrl(url, ["AWAITING_REVIEW", "APPROVED"])).length > 0;
     const selfAdd = !command.creator;
     const created = await store.createNomination({
       postId: m.id,
@@ -71,14 +74,15 @@ export async function handleMention(deps: EngineDeps, m: Mention): Promise<strin
       creatorXId: selfAdd ? m.authorId : (command.creator!.id ?? null),
       creatorHandle: selfAdd ? m.authorHandle : command.creator!.handle,
       sourceUrl: url,
-      state: optedOut || live ? "REJECTED" : selfAdd ? "AWAITING_REVIEW" : "AWAITING_CREATOR",
+      state: optedOut || live || pending ? "REJECTED" : selfAdd ? "AWAITING_REVIEW" : "AWAITING_CREATOR",
     });
     if (!created) return "already recorded";
     if (live) await store.queueReply(m.id, SAY.already);
     else if (optedOut) await store.queueReply(m.id, SAY.optedOut);
+    else if (pending) await store.queueReply(m.id, SAY.pending);
     else if (selfAdd) await store.queueReply(m.id, SAY.review);
     else await store.queueReply(m.id, SAY.askCreator(created.creatorHandle));
-    return live ? "already live" : optedOut ? "opted out" : selfAdd ? "self-add queued for review" : "waiting on creator";
+    return live ? "already live" : optedOut ? "opted out" : pending ? "already asked for" : selfAdd ? "self-add queued for review" : "waiting on creator";
   }
 
   if (command.kind === "yes" || command.kind === "no") {

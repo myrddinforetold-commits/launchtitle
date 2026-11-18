@@ -163,6 +163,25 @@ describe("crawl import", () => {
     expect(result.files.map(([name]) => name).sort()).toEqual(["assets/app.js", "index.html", "media/sky.webp", "models/macaw-fly.glb"]);
   });
 
+  it("does not keep a front page sent in place of a missing file, or follow it in circles", async () => {
+    const page = `<script src="assets/app.js"></script><img src="assets/logo.png">`;
+    const { fetchImpl } = fakeSite({
+      "https://spa.example/": { body: page },
+      "https://spa.example/assets/app.js": { body: "load('models/rock.glb'); load('assets/extra.js')", type: "text/javascript" },
+      "https://spa.example/assets/logo.png": { body: "png", type: "image/png" },
+    });
+    // Like many hosts, this one answers every unknown address with the front page.
+    const spa = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const res = await fetchImpl(input, init);
+      if (res.status !== 404) return res;
+      const fallback = new Response(page, { status: 200, headers: { "content-type": "text/html; charset=utf-8" } });
+      Object.defineProperty(fallback, "url", { value: String(input) });
+      return fallback;
+    }) as typeof fetch;
+    const result = await crawlSite("https://spa.example/", { fetchImpl: spa });
+    expect(result.files.map(([name]) => name).sort()).toEqual(["assets/app.js", "assets/logo.png", "index.html"]);
+  });
+
   it("refuses private addresses and cross-site redirects", async () => {
     for (const host of ["localhost", "127.0.0.1", "10.1.2.3", "192.168.0.5", "169.254.169.254", "172.20.0.1", "[::1]", "db.internal"]) {
       expect(isPrivateHost(host.replace(/^\[|\]$/g, "")), host).toBe(true);
